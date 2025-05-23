@@ -12,7 +12,7 @@ const { getUserIdFromAccessToken } = require('../controllers/userController');
 const KanjiDB = require('../schemas/kanjiSchema');
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 1; // nombre de points pour gagner
+const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
 
 const modelMap = {
@@ -28,7 +28,7 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
 
     return kanjis.map(k => {
         const meanings = k[`meaning-${lang}`] || [];
-        k.meaning = meanings.length > 0 ? meanings[0] : "";
+        k.meaning = meanings.length > 0 ? meanings[0] : "rien";
 
         // On supprime les anciens champs pour ne pas polluer la réponse
         delete k["meaning-fr"];
@@ -180,7 +180,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
             }
 
             // on genere une nouvelle response
-            const response = await generateResponse(payload.success, payload.startTime, getCardFunction);
+            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang);
 
             // on ajoute "correct" dans l'objet response retourné
             return res.status(200).json({

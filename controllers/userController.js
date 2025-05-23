@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { generateAccessToken, generateRefreshToken } = require("../utils/tokenUtils");
-require("dotenv").config();
+//require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
 const transporter = nodemailer.createTransport({

@@ -46,7 +46,6 @@ app.use(langMiddleware);
 app.use((req, res, next) => {
     req.t = createTranslator(req.lang || 'fr');
     console.log("Langue détectée :", req.lang);
-    console.log("Traduction test :", req.t("game_error_unable_starting_game"));
     next();
 });
 
