@@ -1,0 +1,31 @@
+{
+    "game_error_unable_starting_game": {
+      "fr": "Impossible de démarrer le jeu !",
+      "en": "Not able to start the game!"
+    },
+    "game_label_anonymous": {
+      "fr": "Anonyme",
+      "en": "Anonymous"
+    },
+    "game_error_unable_loading_ranking": {
+      "fr": "Impossible de charger le classement !",
+      "en": "Not able to load the ranking!"
+    },
+    "game_error_missing_answer_parameters": {
+      "fr": "Tous les paramètres sont requis !",
+      "en": "All parameters are required!"
+    },
+    "game_error_server": {
+      "fr": "Erreur du serveur !",
+      "en": "Server error!"
+    },
+    "error_expired_token": {
+      "fr": "Token expiré !",
+      "en": "Expired token!"
+    },
+    "error_invalid_token": {
+      "fr": "Token invalide !",
+      "en": "Invalid token!"
+    }
+  }
+  

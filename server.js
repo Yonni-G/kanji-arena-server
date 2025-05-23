@@ -11,6 +11,7 @@ const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const { errorHandler } = require("./middleware/errorMiddleware");
 const langMiddleware = require("./middleware/langMiddleware");
+const { createTranslator } = require('./translations/translator');
 
 dotenv.config();
 const app = express();
@@ -38,11 +39,21 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(langMiddleware); // 👈 applique la détection de langue ici
+// On déteccte et stocke la langue
+app.use(langMiddleware);
+
+// Création du traducteur
+app.use((req, res, next) => {
+    req.t = createTranslator(req.lang || 'fr');
+    console.log("Langue détectée :", req.lang);
+    console.log("Traduction test :", req.t("game_error_unable_starting_game"));
+    next();
+});
+
+// On charge les routes
 app.use("/api/:lang/users", userRoutes);
 app.use("/api/:lang/games", gameRoutes);
 
-app.use(errorHandler);
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log("MongoDB Connected"))
@@ -53,6 +64,8 @@ mongoose.connect(process.env.MONGODB_URI)
 app.get("/", (req, res) => {
     res.send("Bienvenue sur mon API !");
 });
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

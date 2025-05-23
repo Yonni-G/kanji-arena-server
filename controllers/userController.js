@@ -22,9 +22,6 @@ exports.getUserIdFromAccessToken = async (req, res) => {
     const authHeader = req.headers.authorization;
     const accessToken = authHeader?.split(' ')[1];
     const refreshToken = req.cookies.refreshToken;
-    console.log(accessToken);
-    console.log("refresh:"+refreshToken);
-
 
     if (!accessToken) return null;
 
@@ -42,7 +39,7 @@ exports.getUserIdFromAccessToken = async (req, res) => {
 
                 // ✅ Option 1 : remettre en header pour le client (interceptor ou futur appel)
                 res.setHeader('Authorization', `Bearer ${newAccessToken}`);
-                console.log(`nouveau access token : ${newAccessToken}`);
+                // console.log(`nouveau access token : ${newAccessToken}`);
                 
 
                 // ✅ Option 2 (facultative) : tu peux aussi le mettre dans un cookie
@@ -60,7 +57,7 @@ exports.getUserIdFromAccessToken = async (req, res) => {
 
 exports.setAlertOutOfRanking = async (req, res) => {    
 
-    const userId = await exports.getUserIdFromAccessToken(req, res);console.log("id:"+userId);
+    const userId = await exports.getUserIdFromAccessToken(req, res);
     
     const { alertOutOfRanking } = req.body;
 

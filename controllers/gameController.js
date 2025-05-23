@@ -28,7 +28,7 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
 
     return kanjis.map(k => {
         const meanings = k[`meaning-${lang}`] || [];
-        k.meaning = meanings.length > 0 ? meanings[0] : "pas de sens";
+        k.meaning = meanings.length > 0 ? meanings[0] : "";
 
         // On supprime les anciens champs pour ne pas polluer la réponse
         delete k["meaning-fr"];
@@ -52,7 +52,7 @@ exports.startGame = (getCardFunction) => {
             return res.status(200).json(response)
         } catch (error) {
             console.log(error)
-            return res.status(500).json({ message: "Impossible de démarrer le jeu !" });
+            return res.status(500).json({ message: req.t("game_error_unable_starting_game") });
         }
     }
 }
@@ -70,7 +70,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
                         // Modifie le tableau pour gérer les utilisateurs manquants
                         return chronos.map(chrono => {
                             if (!chrono.userId) {
-                                chrono.userId = { username: 'Anonyme' }; // Si pas d'utilisateur, mettre "Anonyme"
+                                chrono.userId = { username: req.t("game_label_anonymous") }; // Si pas d'utilisateur, mettre "Anonyme"
                             }
                             return chrono;
                         });
@@ -105,7 +105,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
                 if (bestChrono) {
                     const betterCount = await Model.countDocuments({ chrono: { $lt: bestChrono.chrono } });
                     const userRank = betterCount + 1;
-                    let username = bestChrono.userId?.username || 'anonyme'
+                    let username = bestChrono.userId?.username || req.t("game_label_anonymous")
                     userBestChrono = {
                         chronoValue: bestChrono.chrono,
                         ranking: userRank,
@@ -117,7 +117,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             return res.status(200).json({ metrics, userBestChrono, chronos });
         } catch(error) {
             console.log(error)
-            return res.status(500).json({ message: `Impossible d'obtenir le classement "${gameMode}"` });
+            return res.status(500).json({ message: req.t("game_error_unable_loading_ranking") });
         }
 
     }
@@ -129,7 +129,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
         const { gameToken, choiceIndex } = req.body;
 
         if (!gameToken || choiceIndex === undefined) {
-            return res.status(401).json({ message: "Tous les paramètres sont requis !" });
+            return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
         }
 
         try {
@@ -163,7 +163,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
 
                     } catch (err) {
                         console.error("Erreur lors de l'enregistrement du chrono :", err);
-                        return res.status(500).json({ error: "Erreur serveur" });
+                        return res.status(500).json({ error: req.t("game_error_server") });
                     }
                 }
 
@@ -191,10 +191,10 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
 
         } catch (error) {
             if (error.name === 'TokenExpiredError') {
-                return res.status(401).json({ message: "Token expiré" });
+                return res.status(401).json({ message: req.t("error_expired_token") });
             }
 
-            return res.status(401).json({ message: "Token invalide" });
+            return res.status(401).json({ message: req.t("error_invalid_token") });
         }
     }
 };
@@ -276,5 +276,3 @@ exports.getReverseCard = function (kanjis_list, correctIndex) {
 
     return card;
 }
-
-
