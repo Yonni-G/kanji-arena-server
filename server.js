@@ -10,6 +10,7 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const { errorHandler } = require("./middleware/errorMiddleware");
+const langMiddleware = require("./middleware/langMiddleware");
 
 dotenv.config();
 const app = express();
@@ -36,8 +37,11 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
-app.use("/api/users", userRoutes);
-app.use("/api/games", gameRoutes);
+
+app.use(langMiddleware); // 👈 applique la détection de langue ici
+app.use("/api/:lang/users", userRoutes);
+app.use("/api/:lang/games", gameRoutes);
+
 app.use(errorHandler);
 
 mongoose.connect(process.env.MONGODB_URI)

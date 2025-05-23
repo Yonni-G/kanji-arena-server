@@ -21,12 +21,24 @@ const modelMap = {
     // ajouter d'autres modes ici
 };
 
-const _getKanjis = async (nb_kanjis_choices) => {
+const _getKanjis = async (nb_kanjis_choices, lang) => {
     const kanjis = await KanjiDB.aggregate([
-        { $sample: { size: nb_kanjis_choices } } // Sélectionne x kanjis au hasard
+        { $sample: { size: nb_kanjis_choices } }
     ]);
-    return kanjis;
-}
+
+    return kanjis.map(k => {
+        const meanings = k[`meaning-${lang}`] || [];
+        k.meaning = meanings.length > 0 ? meanings[0] : "pas de sens";
+
+        // On supprime les anciens champs pour ne pas polluer la réponse
+        delete k["meaning-fr"];
+        delete k["meaning-en"];
+
+        return k;
+    });
+};  
+  
+  
 
 // startGame retourne :
 // 1/ un token de jeu qui contient dans son payload :
@@ -36,7 +48,7 @@ const _getKanjis = async (nb_kanjis_choices) => {
 exports.startGame = (getCardFunction) => {
     return async (req, res) => {
         try {
-            const response = await generateResponse(0, Date.now(), getCardFunction);
+            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang);
             return res.status(200).json(response)
         } catch (error) {
             console.log(error)
@@ -200,7 +212,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
     }
 */
 
-async function generateResponse(success, startTime, getCardFunction) {
+async function generateResponse(success, startTime, getCardFunction, lang) {
 
     // on tire un chiffre entre 0 et NB_KANJIS_CHOICES définit la place de la bonne réponse
     const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
@@ -208,7 +220,7 @@ async function generateResponse(success, startTime, getCardFunction) {
     const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime }));
     //console.log(gameToken)
     // on crée une question
-    const card = await _getCard(getCardFunction, correctIndex)
+    const card = await _getCard(getCardFunction, correctIndex, lang)
     //console.log(card);
     const response = {
         gameToken: gameToken,
@@ -217,10 +229,10 @@ async function generateResponse(success, startTime, getCardFunction) {
     return response;
 }
 
-const _getCard = async (getCardFunction, correctIndex) => {
+const _getCard = async (getCardFunction, correctIndex, lang) => {
 
     // on recupere x kanjis au hasard
-    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES);
+    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang);
     //console.log(kanjis_list);
 
     // on construit notre card
