@@ -17,7 +17,7 @@ const generateAccessToken = (user) => {
             username: user.username
          },
         process.env.JWT_SECRET,
-        { expiresIn: "1d" } // Expiration de 1 minute pour tester
+        { expiresIn: "10s" } // Expiration de 1 minute pour tester
     );
 };
 

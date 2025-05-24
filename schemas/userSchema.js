@@ -10,7 +10,6 @@ const UserSchema = new mongoose.Schema({
     alertOutOfRanking: { type: Boolean, default: true},
     resetToken: { type: String },
     resetTokenExpiration: { type: Date },
-    refreshToken: { type: String }
 });
 
 // Hachage du mot de passe avant la sauvegarde de l'utilisateur

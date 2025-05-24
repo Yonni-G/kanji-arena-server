@@ -21,6 +21,6 @@ exports.authMiddleware = (req, res, next) => {
         }
 
         // Token invalide (mal formé, modifié, etc.) → pas récupérable → 403
-        return res.status(403).json({ message: `Invalid token.${token}` });
+        return res.status(403).json({ message: `Invalid token.` });
     }
 };

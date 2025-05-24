@@ -3,8 +3,7 @@ const User = require("../schemas/userSchema");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const { generateAccessToken, generateRefreshToken } = require("../utils/tokenUtils");
-//require("dotenv").config();
+const { generateAccessToken } = require("../utils/tokenUtils");
 const jwt = require("jsonwebtoken");
 
 const transporter = nodemailer.createTransport({
@@ -21,7 +20,6 @@ const transporter = nodemailer.createTransport({
 exports.getUserIdFromAccessToken = async (req, res) => {
     const authHeader = req.headers.authorization;
     const accessToken = authHeader?.split(' ')[1];
-    const refreshToken = req.cookies.refreshToken;
 
     if (!accessToken) return null;
 
@@ -29,28 +27,7 @@ exports.getUserIdFromAccessToken = async (req, res) => {
         const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
         return decoded.id;
     } catch (err) {
-        if (err.name === "TokenExpiredError" && refreshToken) {
-            try {
-            
-                const user = await User.findOne({ refreshToken });
-                if (!user) return null;
-
-                const newAccessToken = generateAccessToken(user);
-
-                // ✅ Option 1 : remettre en header pour le client (interceptor ou futur appel)
-                res.setHeader('Authorization', `Bearer ${newAccessToken}`);
-                // console.log(`nouveau access token : ${newAccessToken}`);
-                
-
-                // ✅ Option 2 (facultative) : tu peux aussi le mettre dans un cookie
-                // res.cookie('accessToken', newAccessToken, { httpOnly: true });
-
-                return user._id;
-            } catch (refreshError) {
-                console.error("Erreur de refresh :", refreshError);
-                return null;
-            }
-        }
+        console.log(err);        
         return null;
     }
 };
@@ -67,10 +44,10 @@ exports.setAlertOutOfRanking = async (req, res) => {
 
     try {
         const user = await User.findOneAndUpdate(
-            { userId },
+            { _id: userId },
             { alertOutOfRanking },
             { new: true }
-        );        
+        );       
 
         if (!user) {
             return res.status(404).json({ message: "Utilisateur non trouvé." });
@@ -83,24 +60,6 @@ exports.setAlertOutOfRanking = async (req, res) => {
     }
 };
 
-// on va vérifier si le user possède un cookie de refresh token
-exports.checkRefreshToken = async (req, res) => {
-    const refreshToken = req.cookies.refreshToken;
-    if (!refreshToken) return res.status(401).json({ message: "Pas de refresh token" });
-
-    try {
-        const user = await User.findOne({ refreshToken });
-        if (!user) return res.status(401).json({ message: "Refresh token invalide" });
-
-        // Générer un nouveau access token
-        const accessToken = generateAccessToken(user);
-        return res.json({ accessToken });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: "Erreur serveur" });
-    }
-}
-
 exports.checkResetToken = async (req, res) => {
     const { resetToken } = req.body; // Récupérer le token depuis le body
     //return res.status(400).json({ resetToken });
@@ -109,20 +68,12 @@ exports.checkResetToken = async (req, res) => {
         const user = await User.findOne({ resetToken, resetTokenExpiration: { $gt: Date.now() } });
         if (!user) return res.status(400).json({ message: "Votre lien de réinitialisation a expiré ou est invalide. Veuillez demander un nouveau lien." });
 
-        res.status(200).json({ message: "Reset token valide" });
+        return res.status(200).json({ message: "Reset token valide" });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Erreur serveur" });
     }
 }
-
-exports.protectedRoute = (req, res) => {
-    // Ici, tu as accès à l'utilisateur via req.user, ajouté par le middleware
-    res.json({
-        message: "Vous avez accès à cette route protégée",
-        user: req.user, // Par exemple, tu renvoies les données de l'utilisateur
-    });
-};
 
 // Inscription d'un utilisateur
 exports.register = async (req, res, next) => {
@@ -168,10 +119,8 @@ exports.register = async (req, res, next) => {
             return res.status(400).json({ message: "Cette adresse email est déjà utilisée !" });
         }
 
-
         // Créer un nouvel utilisateur
         const user = new User({ username, email: email.toLowerCase(), password });
-
 
         // Sauvegarder l'utilisateur dans la base de données
         await user.save();
@@ -214,38 +163,13 @@ exports.login = async (req, res, next) => {
         }
 
         const accessToken = generateAccessToken(user);
-        const refreshToken = generateRefreshToken(user);
-        user.refreshToken = refreshToken;
         await user.save();
 
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true, secure: true, sameSite: "None", // Ajoute une durée de vie (ici, 7 jours)
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-        res.json({ accessToken, message: "Bienvenue, vous pouvez jouer à Kanji-Master !" });
+        return res.json({ accessToken, message: "Bienvenue, vous pouvez jouer à Kanji-Master !" });
     } catch (error) {
         next(error);
     }
 };
-
-// Déconnexion d'un utilisateur
-exports.logout = async (req, res, next) => {
-    try {
-        const refreshToken = req.cookies.refreshToken;
-        if (!refreshToken) return res.status(401).json({ message: "Pas de refresh token" });
-
-        const user = await User.findOne({ refreshToken });
-        if (!user) return res.status(401).json({ message: "Refresh token invalide" });
-
-        user.refreshToken = undefined;
-        await user.save();
-
-        res.clearCookie("refreshToken", { httpOnly: true, secure: true, sameSite: "None" });
-        res.status(200).json({ message: "Déconnexion réussie" });
-    } catch (error) {
-        next(error);
-    }
-}
 
 // Forgot password (envoi du lien de réinitialisation)
 exports.forgotPassword = async (req, res, next) => {
@@ -265,7 +189,7 @@ exports.forgotPassword = async (req, res, next) => {
         }
 
         const user = await User.findOne({ email });
-        if (!user) res.status(200).json({ message: "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé !" });
+        if (!user) return res.status(200).json({ message: "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé !" });
 
         const token = crypto.randomBytes(32).toString("hex");
         user.resetToken = token;
@@ -314,7 +238,7 @@ exports.resetPassword = async (req, res, next) => {
         user.resetTokenExpiration = undefined;
         await user.save();
 
-        res.status(200).json({ message: 'Mot de passe modifié avec succès ! Vous pouvez dès à présent vous connecter à nouveau.' });
+        return res.status(200).json({ message: 'Mot de passe modifié avec succès ! Vous pouvez dès à présent vous connecter à nouveau.' });
     } catch (error) {
         next(error);
     }
