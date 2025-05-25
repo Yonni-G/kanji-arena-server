@@ -32,6 +32,25 @@ exports.getUserIdFromAccessToken = async (req, res) => {
     }
 };
 
+exports.getAlertOutOfRanking = async (req, res) => {    
+
+    try {
+        const userId = await exports.getUserIdFromAccessToken(req, res);        
+        const user = await User.findOne(
+            { _id: userId }
+        );
+
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé." });
+        }
+
+        return res.status(200).json({ alertOutOfRanking: user.alertOutOfRanking });
+    } catch (err) {
+        console.error("Erreur dans getAlertOutOfRanking:", err);
+        return res.status(500).json({ message: "Erreur serveur." });
+    }
+};
+
 exports.setAlertOutOfRanking = async (req, res) => {    
 
     const userId = await exports.getUserIdFromAccessToken(req, res);

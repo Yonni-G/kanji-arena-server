@@ -16,7 +16,7 @@ exports.authMiddleware = (req, res, next) => {
         return next();
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
-            // Le token est expiré → on peut le refresh → on envoie 401
+            // Le token est expiré → on envoie 401
             return res.status(401).json({ message: "Token expired." });
         }
 

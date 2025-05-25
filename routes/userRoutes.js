@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { authMiddleware } = require("../middleware/authMiddleware");
-const { register, login, forgotPassword, resetPassword, checkResetToken, setAlertOutOfRanking } = require("../controllers/userController");
+const { register, login, forgotPassword, resetPassword, checkResetToken, setAlertOutOfRanking, getAlertOutOfRanking } = require("../controllers/userController");
 
 // routes non-protégées
 router.post("/register", register);
@@ -16,5 +16,6 @@ router.post("/check-reset-token", checkResetToken);
 // ROUTES PROTEGEES
 // profil utilisateur
 router.post("/set-alert-out-of-ranking", setAlertOutOfRanking, authMiddleware);
+router.get("/get-alert-out-of-ranking", getAlertOutOfRanking, authMiddleware);
 
 module.exports = router;
