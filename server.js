@@ -18,7 +18,7 @@ const app = express();
 
 const allowedOrigins = [
     "http://localhost:4200",
-    "https://www.yonni.com"
+    "https://www.kanji-arena.com"
 ];
 
 
