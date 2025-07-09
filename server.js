@@ -18,7 +18,9 @@ const app = express();
 
 const allowedOrigins = [
     "http://localhost:4200",
-    "https://www.kanji-arena.com"
+    "https://www.kanji-arena.com",
+    "https://kanji-arena.com",
+    "http://kanjiah.cluster021.hosting.ovh.net/"
 ];
 
 
@@ -34,18 +36,18 @@ const corsOptions = {
     exposedHeaders: ['Authorization']
 };
 
-//app.use(cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
 
-// On déteccte et stocke la langue
+// On détecte et stocke la langue
 app.use(langMiddleware);
 
 // Création du traducteur
 app.use((req, res, next) => {
     req.t = createTranslator(req.lang || 'fr');
-    console.log("Langue détectée :", req.lang);
+    //console.log("Langue détectée :", req.lang);
     next();
 });
 
