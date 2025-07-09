@@ -20,7 +20,7 @@ const allowedOrigins = [
     "http://localhost:4200",
     "https://www.kanji-arena.com",
     "https://kanji-arena.com",
-    "http://kanjiah.cluster021.hosting.ovh.net/"
+    "http://kanjiah.cluster021.hosting.ovh.net"
 ];
 
 
