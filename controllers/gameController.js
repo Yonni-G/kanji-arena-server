@@ -214,7 +214,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
 
 async function generateResponse(success, startTime, getCardFunction, lang) {
 
-    // on tire un chiffre entre 0 et NB_KANJIS_CHOICES définit la place de la bonne réponse
+    // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
     const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
     // on va créer un nouveau token de game
     const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime }));

@@ -1,1 +1,1 @@
-# kanji-master-server
+# Kanji-Arena-server

@@ -7,7 +7,7 @@ const { generateAccessToken } = require("../utils/tokenUtils");
 const jwt = require("jsonwebtoken");
 
 const transporter = nodemailer.createTransport({
-    name: 'yonni.com',
+    name: 'kanji-arena.com',
     host: "ssl0.ovh.net", // Serveur SMTP OVH
     port: 465, // Port sécurisé SSL
     secure: true, // `true` pour SSL
@@ -145,7 +145,7 @@ exports.register = async (req, res, next) => {
         await user.save();
 
         // Répondre avec un message de succès
-        return res.status(201).json({ message: "Vous êtes bien inscrit à Kanji-Master ! Connectez-vous dès maintenant pour commencer à jouer !" });
+        return res.status(201).json({ message: "Vous êtes bien inscrit à Kanji-Arena ! Connectez-vous dès maintenant pour commencer à jouer !" });
     } catch (error) {
         console.log(error);        
         return res.status(500).json({ message: "Erreur technique. Veuillez réessayer ultérieurement." });
@@ -184,7 +184,7 @@ exports.login = async (req, res, next) => {
         const accessToken = generateAccessToken(user);
         await user.save();
 
-        return res.json({ accessToken, message: "Bienvenue, vous pouvez jouer à Kanji-Master !" });
+        return res.json({ accessToken, message: "Bienvenue, vous pouvez jouer à Kanji-Arena !" });
     } catch (error) {
         next(error);
     }
@@ -218,7 +218,7 @@ exports.forgotPassword = async (req, res, next) => {
         const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
 
         await transporter.sendMail({
-            from: `"Kanji-Master" <${process.env.EMAIL_USER}>`,
+            from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: "Réinitialisation du mot de passe",
             text: `Cliquez sur ce lien pour réinitialiser votre mot de passe : ${resetLink}`,

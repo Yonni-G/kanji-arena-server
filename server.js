@@ -20,14 +20,11 @@ const allowedOrigins = [
     "http://localhost:4200",
     "https://www.kanji-arena.com",
     "https://kanji-arena.com",
-    "http://kanjiah.cluster021.hosting.ovh.net"
 ];
 
 
 const corsOptions = {
-    origin: (origin, callback) => {
-        console.log("CORS Origin:", origin);
-        
+    origin: (origin, callback) => {        
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
