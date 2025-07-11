@@ -9,6 +9,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
+const commonRoutes = require("./routes/commonRoutes");
 const { errorHandler } = require("./middleware/errorMiddleware");
 const langMiddleware = require("./middleware/langMiddleware");
 const { createTranslator } = require('./translations/translator');
@@ -53,6 +54,7 @@ app.use((req, res, next) => {
 // On charge les routes
 app.use("/api/:lang/users", userRoutes);
 app.use("/api/:lang/games", gameRoutes);
+app.use("/api/:lang", commonRoutes);
 
 
 mongoose.connect(process.env.MONGODB_URI)

@@ -2,20 +2,10 @@
 const User = require("../schemas/userSchema");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+
 const { generateAccessToken } = require("../utils/tokenUtils");
 const jwt = require("jsonwebtoken");
-
-const transporter = nodemailer.createTransport({
-    name: 'kanji-arena.com',
-    host: "ssl0.ovh.net", // Serveur SMTP OVH
-    port: 465, // Port sécurisé SSL
-    secure: true, // `true` pour SSL
-    auth: {
-        user: process.env.EMAIL_USER, // Ton adresse e-mail OVH
-        pass: process.env.EMAIL_PASS, // Mot de passe de ton e-mail
-    },
-});
+const { transporter, formatContactMessage } = require("./commonController");
 
 exports.getUserIdFromAccessToken = async (req, res) => {
     const authHeader = req.headers.authorization;
