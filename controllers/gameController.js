@@ -11,7 +11,7 @@ const User = require("../schemas/userSchema");
 
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 1; // nombre de points pour gagner
+const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
 const NB_LIMIT_ALERT_RANKING = 10; // Seuls les X premiers joueurs sont notifiés que leur score a été battu
 
@@ -85,6 +85,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
                 username: entry.userId.username,
                 nationality: entry.userId.nationality,
                 chronoValue: entry.chrono,
+                createdAt: entry.createdAt || new Date() // Assure que createdAt est toujours défini
             }));
 
             // on construit notre objet de données avec des métriques
@@ -170,7 +171,7 @@ async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
         ejectedChrono.userId &&
         ejectedChrono.userId.alertOutOfRanking &&
         ejectedChrono.userId.email
-        //&& (!newUser || String(ejectedChrono.userId._id) !== String(newUser._id)) // <-- AJOUT
+        && (!newUser || String(ejectedChrono.userId._id) !== String(newUser._id)) // <-- évite de notifier le joueur qui vient de battre son propre chrono
     ) {
         // 5. Envoie la notification (ici exemple par email)
         sendOutOfRankingNotification({
@@ -195,7 +196,7 @@ async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChron
     const formattedNew = formatChrono(newChrono);
 
     const gameModeUpper = gameMode.toUpperCase();
-    const arenaUrl = `https://kanji-arena.com/games/${gameMode}`;
+    const arenaUrl = `${process.env.EMAIL_USER}/games/${gameMode}`;
 
     await transporter.sendMail({
         from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
