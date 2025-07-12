@@ -28,7 +28,11 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
 
     return kanjis.map(k => {
         const meanings = k[`meaning-${lang}`] || [];
+        // on recupere le premier sens du kanji, on considère que c'est le plus pertinent
+        // si pas de sens, on met "rien" (pour débogage)
         k.meaning = meanings.length > 0 ? meanings[0] : "rien";
+        // on ajoute un autre champ meaning_more, il contient un tableau avec les éventuels autres sens du kanji
+        k.meaning_more = meanings.slice(1) || [];
 
         // On supprime les anciens champs pour ne pas polluer la réponse
         delete k["meaning-fr"];
@@ -37,8 +41,90 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
         return k;
     });
 };  
-  
-  
+
+// on crée une response
+/*
+    gameToken
+    card {
+        proposal
+        more
+        choices [
+            label
+            more
+            label
+            more
+        ]
+    }
+*/
+
+async function generateResponse(success, startTime, getCardFunction, lang) {
+
+    // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
+    const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
+    // on va créer un nouveau token de game
+    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime }));
+    //console.log(gameToken)
+    // on crée une question
+    const card = await _getCard(getCardFunction, correctIndex, lang)
+    //console.log(card);
+    const response = {
+        gameToken: gameToken,
+        card: card
+    }
+    return response;
+}
+
+const _getCard = async (getCardFunction, correctIndex, lang) => {
+
+    // on recupere x kanjis au hasard
+    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang);
+    //console.log(kanjis_list);
+
+    // on construit notre card
+    const card = getCardFunction(kanjis_list, correctIndex);
+
+    return card;
+}
+
+exports.getClassicCard = function (kanjis_list, correctIndex) {
+    // on construit nos choix sans le premier kanji
+    const choices = kanjis_list.slice(1).map((kanji) => ({
+        label: kanji.meaning,
+        // Ajoutons le champ "more" avec les significations supplémentaires
+        more: kanji.meaning_more
+    }));
+
+    // on construit notre card
+    const card = {
+        proposal: kanjis_list[0].kanji,
+        choices: choices,
+    }
+
+    // on insère le label de la bonne réponse ainsi que les éventuelles significations supplémentaires
+    card.choices.splice(correctIndex, 0, { label: kanjis_list[0].meaning, more: kanjis_list[0].meaning_more });
+
+    return card;
+}
+
+exports.getReverseCard = function (kanjis_list, correctIndex) {
+    // on construit nos choix sans le premier kanji
+    const choices = kanjis_list.slice(1).map((kanji) => ({
+        label: kanji.kanji,
+    }));
+
+    // on construit notre card
+    const card = {
+        proposal: kanjis_list[0].meaning,
+        // Ajoutons le champ "more" avec les significations supplémentaires
+        more: kanjis_list[0].meaning_more,
+        choices: choices,
+    }
+
+    // on écrase le kanji par celui de la bonne réponse
+    card.choices.splice(correctIndex, 0, { label: kanjis_list[0].kanji });
+
+    return card;
+}  
 
 // startGame retourne :
 // 1/ un token de jeu qui contient dans son payload :
@@ -126,6 +212,85 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
     }
 
 }
+
+exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
+    return async (req, res) => {
+        const { gameToken, choiceIndex } = req.body;
+
+        if (!gameToken || choiceIndex === undefined) {
+            return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
+        }
+
+        try {
+            // Vérifie la validité du token 
+            const decoded = jwt.verify(gameToken, process.env.JWT_GAME_SECRET);
+            // et déchiffre son contenu
+            const payload = decryptPayload(decoded);
+
+            // on va comparer les reponses
+            let correct = false;
+
+            if (choiceIndex === payload.correctIndex) {
+                correct = true;
+                payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini
+            }
+            // le joueur a gagné
+            if (payload.success >= NB_SUCCESS_FOR_WINNING) {
+                const userId = await getUserIdFromAccessToken(req, res);
+                const chronoValue = Date.now() - payload.startTime;
+
+                const Model = modelMap[gameMode];
+
+                // on sauve son chrono s'il est connecté
+                if (userId && Model) {
+                    try {
+                        const chrono = new Model({
+                            userId: userId,
+                            chrono: chronoValue,
+                        });
+                        await chrono.save();
+                        // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
+                        // Récupère le joueur qui vient de battre le score
+                        const newUser = await User.findById(userId).select('username');
+                        await notifyOutOfRanking(chrono, Model, gameMode, newUser);
+
+                    } catch (err) {
+                        console.error("Erreur lors de l'enregistrement du chrono :", err);
+                        return res.status(500).json({ error: req.t("game_error_server") });
+                    }
+                }
+
+                const betterChronosCount = await Model.countDocuments({
+                    chrono: { $lt: chronoValue }
+                });
+
+                const ranking = betterChronosCount + 1;
+
+                return res.status(200).json({
+                    chronoValue: chronoValue,
+                    ranking: ranking
+                });
+            }
+
+            // on genere une nouvelle response
+            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang);
+
+            // on ajoute "correct" dans l'objet response retourné
+            return res.status(200).json({
+                correct: correct,
+                correctIndex: payload.correctIndex,
+                ...response,
+            });
+
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({ message: req.t("error_expired_token") });
+            }
+
+            return res.status(401).json({ message: req.t("error_invalid_token") });
+        }
+    }
+};
 
 function formatChrono(ms) {
     const minutes = Math.floor(ms / 60000);
@@ -237,162 +402,4 @@ async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChron
 
     });
 
-}
-
-
-exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
-    return async (req, res) => {
-        const { gameToken, choiceIndex } = req.body;
-
-        if (!gameToken || choiceIndex === undefined) {
-            return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
-        }
-
-        try {
-            // Vérifie la validité du token 
-            const decoded = jwt.verify(gameToken, process.env.JWT_GAME_SECRET);
-            // et déchiffre son contenu
-            const payload = decryptPayload(decoded);
-
-            // on va comparer les reponses
-            let correct = false;
-
-            if (choiceIndex === payload.correctIndex) {
-                correct = true;
-                payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini
-            }
-            // le joueur a gagné
-            if (payload.success >= NB_SUCCESS_FOR_WINNING) {
-                const userId = await getUserIdFromAccessToken(req, res);
-                const chronoValue = Date.now() - payload.startTime;
-
-                const Model = modelMap[gameMode];
-
-                // on sauve son chrono s'il est connecté
-                if (userId && Model) {
-                    try {
-                        const chrono = new Model({
-                            userId: userId,
-                            chrono: chronoValue,
-                        });
-                        await chrono.save();
-                        // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
-                        // Récupère le joueur qui vient de battre le score
-                        const newUser = await User.findById(userId).select('username');
-                        await notifyOutOfRanking(chrono, Model, gameMode, newUser);
-
-                    } catch (err) {
-                        console.error("Erreur lors de l'enregistrement du chrono :", err);
-                        return res.status(500).json({ error: req.t("game_error_server") });
-                    }
-                }
-
-                const betterChronosCount = await Model.countDocuments({
-                    chrono: { $lt: chronoValue }
-                });
-
-                const ranking = betterChronosCount + 1;
-
-                return res.status(200).json({
-                    chronoValue: chronoValue,
-                    ranking: ranking
-                });
-            }
-
-            // on genere une nouvelle response
-            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang);
-
-            // on ajoute "correct" dans l'objet response retourné
-            return res.status(200).json({
-                correct: correct,
-                correctIndex: payload.correctIndex,
-                ...response,
-            });
-
-        } catch (error) {
-            if (error.name === 'TokenExpiredError') {
-                return res.status(401).json({ message: req.t("error_expired_token") });
-            }
-
-            return res.status(401).json({ message: req.t("error_invalid_token") });
-        }
-    }
-};
-
-
-// on crée une response
-/*
-    gameToken
-    card {
-        proposal
-        choices [
-            label
-            label            
-        ]
-    }
-*/
-
-async function generateResponse(success, startTime, getCardFunction, lang) {
-
-    // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
-    const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
-    // on va créer un nouveau token de game
-    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime }));
-    //console.log(gameToken)
-    // on crée une question
-    const card = await _getCard(getCardFunction, correctIndex, lang)
-    //console.log(card);
-    const response = {
-        gameToken: gameToken,
-        card: card
-    }
-    return response;
-}
-
-const _getCard = async (getCardFunction, correctIndex, lang) => {
-
-    // on recupere x kanjis au hasard
-    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang);
-    //console.log(kanjis_list);
-
-    // on construit notre card
-    const card = getCardFunction(kanjis_list, correctIndex);
-
-    return card;
-}
-
-exports.getClassicCard = function (kanjis_list, correctIndex) {
-    // on construit nos choix sans le premier kanji
-    const choices = kanjis_list.slice(1).map((kanji) => ({
-        label: kanji.meaning,
-    }));
-
-    // on construit notre card
-    const card = {
-        proposal: kanjis_list[0].kanji,
-        choices: choices,
-    }
-
-    // on écrase le label par celui de la bonne réponse
-    card.choices.splice(correctIndex, 0, { label: kanjis_list[0].meaning });
-
-    return card;
-}
-
-exports.getReverseCard = function (kanjis_list, correctIndex) {
-    // on construit nos choix sans le premier kanji
-    const choices = kanjis_list.slice(1).map((kanji) => ({
-        label: kanji.kanji,
-    }));
-
-    // on construit notre card
-    const card = {
-        proposal: kanjis_list[0].meaning,
-        choices: choices,
-    }
-
-    // on écrase le kanji par celui de la bonne réponse
-    card.choices.splice(correctIndex, 0, { label: kanjis_list[0].kanji });
-
-    return card;
 }
