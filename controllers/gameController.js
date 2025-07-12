@@ -1,19 +1,19 @@
 // gameController.js
 const jwt = require("jsonwebtoken");
-
 const ChronoClassic = require('../models/ChronoClassic');
 const ChronoReverse = require('../models/ChronoReverse');
 const GameMode = require('../models/GameMode');
-
 const { generateGameToken, encryptPayload, decryptPayload } = require('../utils/tokenUtils');
 const { getUserIdFromAccessToken } = require('../controllers/userController');
-
-
 const KanjiDB = require('../schemas/kanjiSchema');
+const { transporter } = require('./commonController'); 
+const User = require("../schemas/userSchema");
+
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
+const NB_SUCCESS_FOR_WINNING = 1; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
+const NB_LIMIT_ALERT_RANKING = 10; // Seuls les X premiers joueurs sont notifiés que leur score a été battu
 
 const modelMap = {
     classic: ChronoClassic,
@@ -64,13 +64,13 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
                 Model.find()
                     .sort({ chrono: 1 })                        // tri croissant
                     .limit(NB_LIMIT_RANKING)                    // top N
-                    .populate('userId', 'username')             // jointure Users
+                    .populate('userId', 'username nationality')             // jointure Users
                     .lean()                                     // objets JS simples
                     .then(chronos => {
                         // Modifie le tableau pour gérer les utilisateurs manquants
                         return chronos.map(chrono => {
                             if (!chrono.userId) {
-                                chrono.userId = { username: req.t("game_label_anonymous") }; // Si pas d'utilisateur, mettre "Anonyme"
+                                chrono.userId = { username: req.t("game_label_anonymous"), nationality: 'fr' }; // Si pas d'utilisateur, mettre "Anonyme"
                             }
                             return chrono;
                         });
@@ -80,10 +80,10 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             ]);
 
             // Ensuite, tu peux retourner ou utiliser `topChronos` et `totalChronos` comme d'habitude.
-
             const chronos = topChronos.map((entry, index) => ({
                 ranking: index + 1,
                 username: entry.userId.username,
+                nationality: entry.userId.nationality,
                 chronoValue: entry.chrono,
             }));
 
@@ -100,16 +100,18 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             if(userId) {
                 const bestChrono = await Model.findOne({ userId })
                 .sort({ chrono: 1 })
-                .populate('userId', 'username');
+                .populate('userId', 'username nationality');
 
                 if (bestChrono) {
                     const betterCount = await Model.countDocuments({ chrono: { $lt: bestChrono.chrono } });
                     const userRank = betterCount + 1;
-                    let username = bestChrono.userId?.username || req.t("game_label_anonymous")
+                    let username = bestChrono.userId?.username || req.t("game_label_anonymous");
+                    let nationality = bestChrono.userId?.nationality || 'fr';
                     userBestChrono = {
                         chronoValue: bestChrono.chrono,
                         ranking: userRank,
-                        username: username
+                        username: username,
+                        nationality: nationality
                     }
                 }
             }
@@ -123,6 +125,119 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
     }
 
 }
+
+function formatChrono(ms) {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    const centiseconds = Math.floor((ms % 1000) / 10);
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+        .toString()
+        .padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+}
+
+async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
+    // 1. Déterminer le rang du nouveau chrono
+    const betterChronosCount = await Model.countDocuments({
+        chrono: { $lt: newChrono.chrono }
+    });
+    const ranking = betterChronosCount + 1;
+
+    // 2. Vérifier si ce chrono est dans le top à notifier
+    if (ranking > NB_LIMIT_ALERT_RANKING) {
+        console.log(`Le chrono ${newChrono.chrono} est au rang ${ranking}, pas de notification.`);
+        return; // Pas de notification si trop bas
+    }
+    console.log(`Le chrono ${newChrono.chrono} est au rang ${ranking}, notification.`);
+
+    // 3. Trouver le chrono qui vient d'être éjecté du top
+
+    const chronos = await Model.find()
+        .sort({ chrono: 1 }) // tri croissant
+        .skip(ranking)       // saute les meilleurs + le nouveau
+        .limit(1)            // prend le suivant
+        .populate('userId', 'username email alertOutOfRanking');
+
+
+    if (!chronos.length) {
+        console.log(`Aucun chrono éjecté du top.`);
+        return; // Personne à notifier
+    }
+
+    const ejectedChrono = chronos[0];
+
+    // 4. Vérifier si ce joueur a activé l'alerte
+    if (
+        ejectedChrono.userId &&
+        ejectedChrono.userId.alertOutOfRanking &&
+        ejectedChrono.userId.email
+        //&& (!newUser || String(ejectedChrono.userId._id) !== String(newUser._id)) // <-- AJOUT
+    ) {
+        // 5. Envoie la notification (ici exemple par email)
+        sendOutOfRankingNotification({
+            user: ejectedChrono.userId,
+            oldChrono: ejectedChrono.chrono,
+            newUser,
+            newChrono: newChrono.chrono,
+            gameMode,
+            oldRanking: ranking
+        }).catch(e => {
+            console.error("Erreur lors de l'envoi du mail de notification :", e);
+        });;
+
+        console.log(
+            `Notification envoyée à ${ejectedChrono.userId.username} (${ejectedChrono.userId.email}) : sorti du top ${NB_LIMIT_ALERT_RANKING}`
+        );
+    }
+}
+
+async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
+    const formattedOld = formatChrono(oldChrono);
+    const formattedNew = formatChrono(newChrono);
+
+    const gameModeUpper = gameMode.toUpperCase();
+    const arenaUrl = `https://kanji-arena.com/games/${gameMode}`;
+
+    await transporter.sendMail({
+        from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: `⚔️ ${user.username}, votre place #${oldRanking} a été conquise dans l’arène ${gameModeUpper}`,
+        html: `
+<p style="font-size:1.2em;"><strong>🛡️ Ave, ${user.username} !</strong></p>
+
+<p>
+    <em>🏟️ Le sable de l’arène a parlé…</em><br>
+    Vous venez de perdre votre place de numéro <strong>#${oldRanking}</strong> dans le classement du jeu <strong>🏛️ ${gameModeUpper}</strong>.
+</p>
+
+<p>
+    C'est le <strong>gladiateur</strong> <b style="color:#b22222;">${newUser.username} 🗡️</b> qui vous détrône, il a frappé fort avec un chrono de <strong style="color:#007bff;">⏱️ ${formattedNew}</strong> !
+</p>
+
+<p>
+    <em>Votre chrono héroïque à vous est de :</em> <strong style="color:#007bff;">⏳ ${formattedOld}</strong>
+</p>
+
+<p>
+    <span style="font-size:1.1em;">⚔️ Le combat n’est jamais terminé.<br>
+    <strong>Reprenez votre glaive et défendez votre honneur !</strong></span>
+</p>
+
+<p>
+    <a href="${arenaUrl}" style="background:#ffd700;color:#222;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px;">
+        🏃‍♂️ Rejoignez l’arène sans tarder
+    </a>
+</p>
+
+<p style="margin-top:2em;">
+    <em>🏅 Gloire à vous, gladiateur de Kanji-Arena !</em><br>
+    — <span style="color:#888;">L’arène romaine</span>
+</p>
+`
+
+    });
+
+}
+
 
 exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
     return async (req, res) => {
@@ -145,21 +260,25 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                 correct = true;
                 payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini
             }
+            // le joueur a gagné
             if (payload.success >= NB_SUCCESS_FOR_WINNING) {
                 const userId = await getUserIdFromAccessToken(req, res);
                 const chronoValue = Date.now() - payload.startTime;
 
                 const Model = modelMap[gameMode];
 
+                // on sauve son chrono s'il est connecté
                 if (userId && Model) {
                     try {
                         const chrono = new Model({
                             userId: userId,
                             chrono: chronoValue,
                         });
-
                         await chrono.save();
-
+                        // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
+                        // Récupère le joueur qui vient de battre le score
+                        const newUser = await User.findById(userId).select('username');
+                        await notifyOutOfRanking(chrono, Model, gameMode, newUser);
 
                     } catch (err) {
                         console.error("Erreur lors de l'enregistrement du chrono :", err);

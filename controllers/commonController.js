@@ -42,5 +42,4 @@ const sendContactMessage = async (req, res) => {
 module.exports = {
     transporter,
     sendContactMessage,
-    formatContactMessage, // si tu veux l’utiliser ailleurs
 };

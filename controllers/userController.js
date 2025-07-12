@@ -87,11 +87,19 @@ exports.checkResetToken = async (req, res) => {
 // Inscription d'un utilisateur
 exports.register = async (req, res, next) => {
     try {
-        const { username, email, password, confirmPassword } = req.body;
+        console.log("Register request received:", req.body);
+        // Récupérer les données du formulaire
+        const { username, nationality, email, password, confirmPassword } = req.body;
 
         // Vérifier si tous les champs sont remplis
-        if (!username || !email || !password || !confirmPassword) {
+        if (!username || !nationality || !email || !password || !confirmPassword) {
             return res.status(400).json({ message: "Tous les champs sont requis" });
+        }
+
+        // Vérifier la validité de la nationalité
+        const nationalityPattern = /^[a-zA-Z]{2}$/; // Format pour les codes de pays à deux lettres
+        if (!nationalityPattern.test(nationality)) {
+            return res.status(400).json({ message: "Saisissez un code de nationalité valide (2 lettres)" });
         }
 
         // Vérifier la validité de l'email
@@ -129,7 +137,7 @@ exports.register = async (req, res, next) => {
         }
 
         // Créer un nouvel utilisateur
-        const user = new User({ username, email: email.toLowerCase(), password });
+        const user = new User({ username, nationality, email: email.toLowerCase(), password });
 
         // Sauvegarder l'utilisateur dans la base de données
         await user.save();
