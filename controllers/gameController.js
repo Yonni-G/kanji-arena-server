@@ -338,6 +338,15 @@ async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
         ejectedChrono.userId.email
         && (!newUser || String(ejectedChrono.userId._id) !== String(newUser._id)) // <-- évite de notifier le joueur qui vient de battre son propre chrono
     ) {
+        // 4bis. Vérifier si c'était son meilleur chrono
+        const bestChrono = await Model.findOne({ userId: ejectedChrono.userId._id })
+            .sort({ chrono: 1 });
+
+        if (!bestChrono || String(bestChrono._id) !== String(ejectedChrono._id)) {
+            console.log(`Le chrono éjecté n'était pas le meilleur du joueur (${ejectedChrono.userId.username}), pas de notification.`);
+            return;
+        }
+
         // 5. Envoie la notification (ici exemple par email)
         sendOutOfRankingNotification({
             user: ejectedChrono.userId,
