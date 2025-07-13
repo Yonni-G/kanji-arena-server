@@ -46,7 +46,7 @@ app.use(langMiddleware);
 
 // Création du traducteur
 app.use((req, res, next) => {
-    req.t = createTranslator(req.lang || 'fr');
+    req.t = createTranslator(req.lang || 'en'); // Défaut à 'en' si pas de langue détectée
     //console.log("Langue détectée :", req.lang);
     next();
 });

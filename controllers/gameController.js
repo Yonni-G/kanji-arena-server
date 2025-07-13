@@ -252,7 +252,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                         // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
                         // Récupère le joueur qui vient de battre le score
                         const newUser = await User.findById(userId).select('username');
-                        await notifyOutOfRanking(chrono, Model, gameMode, newUser);
+                        await notifyOutOfRanking(req, chrono, Model, gameMode, newUser);
 
                     } catch (err) {
                         console.error("Erreur lors de l'enregistrement du chrono :", err);
@@ -301,7 +301,7 @@ function formatChrono(ms) {
         .padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 }
 
-async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
+async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
     // 1. Déterminer le rang du nouveau chrono
     const betterChronosCount = await Model.countDocuments({
         chrono: { $lt: newChrono.chrono }
@@ -349,6 +349,7 @@ async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
 
         // 5. Envoie la notification (ici exemple par email)
         sendOutOfRankingNotification({
+            req: req,
             user: ejectedChrono.userId,
             oldChrono: ejectedChrono.chrono,
             newUser,
@@ -365,50 +366,51 @@ async function notifyOutOfRanking(newChrono, Model, gameMode, newUser) {
     }
 }
 
-async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
+async function sendOutOfRankingNotification({ req, user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
     const formattedOld = formatChrono(oldChrono);
     const formattedNew = formatChrono(newChrono);
 
     const gameModeUpper = gameMode.toUpperCase();
     const arenaUrl = `${process.env.EMAIL_USER}/games/${gameMode}`;
 
+    // On suppose que req.t est déjà injecté via le middleware
     await transporter.sendMail({
         from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
         to: user.email,
-        subject: `⚔️ ${user.username}, votre place #${oldRanking} a été conquise dans l’arène ${gameModeUpper}`,
+        subject: req.t("alert_out_ranking_subject", {
+            username: user.username,
+            oldRanking,
+            gameModeUpper
+        }),
         html: `
-<p style="font-size:1.2em;"><strong>🛡️ Ave, ${user.username} !</strong></p>
+<p style="font-size:1.2em;"><strong>${req.t("alert_out_ranking_greeting", { username: user.username })}</strong></p>
 
 <p>
-    <em>🏟️ Le sable de l’arène a parlé…</em><br>
-    Vous venez de perdre votre place de numéro <strong>#${oldRanking}</strong> dans le classement du jeu <strong>🏛️ ${gameModeUpper}</strong>.
+  ${req.t("alert_out_ranking_intro", { oldRanking, gameModeUpper })}
 </p>
 
 <p>
-    C'est le <strong>gladiateur</strong> <b style="color:#b22222;">${newUser.username} 🗡️</b> qui vous détrône, il a frappé fort avec un chrono de <strong style="color:#007bff;">⏱️ ${formattedNew}</strong> !
+  ${req.t("alert_out_ranking_new_gladiator", { newUsername: newUser.username, formattedNew })}
 </p>
 
 <p>
-    <em>Votre chrono héroïque à vous est de :</em> <strong style="color:#007bff;">⏳ ${formattedOld}</strong>
+  ${req.t("alert_out_ranking_your_time", { formattedOld })}
 </p>
 
 <p>
-    <span style="font-size:1.1em;">⚔️ Le combat n’est jamais terminé.<br>
-    <strong>Reprenez votre glaive et défendez votre honneur !</strong></span>
+  ${req.t("alert_out_ranking_motivation")}
 </p>
 
 <p>
-    <a href="${arenaUrl}" style="background:#ffd700;color:#222;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px;">
-        🏃‍♂️ Rejoignez l’arène sans tarder
-    </a>
+  <a href="${arenaUrl}" style="background:#ffd700;color:#222;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px;">
+    ${req.t("alert_out_ranking_cta")}
+  </a>
 </p>
 
 <p style="margin-top:2em;">
-    <em>🏅 Gloire à vous, gladiateur de Kanji-Arena !</em><br>
-    — <span style="color:#888;">L’arène romaine</span>
+  ${req.t("alert_out_ranking_footer")}
 </p>
 `
-
     });
 
 }

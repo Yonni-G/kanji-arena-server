@@ -1,31 +1,154 @@
 {
-    "game_error_unable_starting_game": {
-      "fr": "Impossible de démarrer le jeu !",
-      "en": "Not able to start the game!"
-    },
-    "game_label_anonymous": {
-      "fr": "Anonyme",
-      "en": "Anonymous"
-    },
-    "game_error_unable_loading_ranking": {
-      "fr": "Impossible de charger le classement !",
-      "en": "Not able to load the ranking!"
-    },
-    "game_error_missing_answer_parameters": {
-      "fr": "Tous les paramètres sont requis !",
-      "en": "All parameters are required!"
-    },
-    "game_error_server": {
-      "fr": "Erreur du serveur !",
-      "en": "Server error!"
-    },
-    "error_expired_token": {
-      "fr": "Token expiré !",
-      "en": "Expired token!"
-    },
-    "error_invalid_token": {
-      "fr": "Token invalide !",
-      "en": "Invalid token!"
-    }
+  "user_not_found": {
+    "fr": "Utilisateur non trouvé.",
+    "en": "User not found."
+  },
+  "server_error": {
+    "fr": "Erreur serveur.",
+    "en": "Server error."
+  },
+  "alert_out_of_ranking_required": {
+    "fr": "Le champ 'alertOutOfRanking' est requis.",
+    "en": "'alertOutOfRanking' field is required."
+  },
+  "alert_out_of_ranking_saved": {
+    "fr": "Votre choix a bien été enregistré.",
+    "en": "Your choice has been saved."
+  },
+  "reset_link_invalid_or_expired": {
+    "fr": "Votre lien de réinitialisation a expiré ou est invalide. Veuillez demander un nouveau lien.",
+    "en": "Your reset link has expired or is invalid. Please request a new one."
+  },
+  "reset_token_valid": {
+    "fr": "Reset token valide",
+    "en": "Reset token is valid"
+  },
+  "all_fields_required": {
+    "fr": "Tous les champs sont requis",
+    "en": "All fields are required"
+  },
+  "invalid_nationality_code": {
+    "fr": "Saisissez un code de nationalité valide (2 lettres)",
+    "en": "Enter a valid nationality code (2 letters)"
+  },
+  "invalid_email": {
+    "fr": "Saisissez une adresse email correcte",
+    "en": "Enter a valid email address"
+  },
+  "invalid_username_length": {
+    "fr": "Le nom d'utilisateur doit contenir entre 3 et 12 caractères alphanumériques",
+    "en": "Username must be 3 to 12 alphanumeric characters"
+  },
+  "weak_password": {
+    "fr": "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial",
+    "en": "Password must be at least 8 characters, with uppercase, lowercase, number and special character"
+  },
+  "passwords_do_not_match": {
+    "fr": "Les mots de passe ne correspondent pas !",
+    "en": "Passwords do not match!"
+  },
+  "username_taken": {
+    "fr": "Désolé ! Ce pseudo est déjà utilisé ! Trouves-en un autre !",
+    "en": "Sorry! This username is already taken! Please choose another one!"
+  },
+  "email_taken": {
+    "fr": "Cette adresse email est déjà utilisée !",
+    "en": "This email address is already in use!"
+  },
+  "register_success": {
+    "fr": "Vous êtes bien inscrit à Kanji-Arena ! Connectez-vous dès maintenant pour commencer à jouer !",
+    "en": "You have successfully registered to Kanji-Arena! Log in now to start playing!"
+  },
+  "technical_error": {
+    "fr": "Erreur technique. Veuillez réessayer ultérieurement.",
+    "en": "Technical error. Please try again later."
+  },
+  "invalid_credentials": {
+    "fr": "Vos identifiants sont invalides, veuillez réessayer.",
+    "en": "Invalid credentials, please try again."
+  },
+  "login_success": {
+    "fr": "Bienvenue, vous pouvez jouer à Kanji-Arena !",
+    "en": "Welcome, you can now play Kanji-Arena!"
+  },
+  "reset_link_sent": {
+    "fr": "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé.",
+    "en": "If a user account exists with this email address, a reset link has been sent."
+  },
+  "reset_email_subject": {
+    "fr": "Réinitialisation du mot de passe",
+    "en": "Password reset"
+  },
+  "reset_email_body": {
+    "fr": "Cliquez sur ce lien pour réinitialiser votre mot de passe : {resetLink}",
+    "en": "Click this link to reset your password: {resetLink}"
+  },
+  "reset_token_invalid_or_expired": {
+    "fr": "Token invalide ou expiré",
+    "en": "Token invalid or expired"
+  },
+  "password_reset_success": {
+    "fr": "Mot de passe modifié avec succès ! Vous pouvez dès à présent vous connecter à nouveau.",
+    "en": "Password successfully changed! You can now log in again."
+  },
+  "game_error_unable_starting_game": {
+    "fr": "Impossible de démarrer le jeu !",
+    "en": "Not able to start the game!"
+  },
+  "game_label_anonymous": {
+    "fr": "Anonyme",
+    "en": "Anonymous"
+  },
+  "game_error_unable_loading_ranking": {
+    "fr": "Impossible de charger le classement !",
+    "en": "Not able to load the ranking!"
+  },
+  "game_error_missing_answer_parameters": {
+    "fr": "Tous les paramètres sont requis !",
+    "en": "All parameters are required!"
+  },
+  "game_error_server": {
+    "fr": "Erreur du serveur !",
+    "en": "Server error!"
+  },
+  "error_expired_token": {
+    "fr": "Token expiré !",
+    "en": "Expired token!"
+  },
+  "error_invalid_token": {
+    "fr": "Token invalide !",
+    "en": "Invalid token!"
+  },
+  "alert_out_ranking_subject": {
+    "fr": "⚔️ {username}, votre place #{oldRanking} a été conquise dans l’arène {gameModeUpper}",
+    "en": "⚔️ {username}, your spot #{oldRanking} was conquered in the {gameModeUpper} arena"
+  },
+  "alert_out_ranking_greeting": {
+    "fr": "🛡️ Ave, {username} !",
+    "en": "🛡️ Hail, {username}!"
+  },
+  "alert_out_ranking_intro": {
+    "fr": "<em>🏟️ Le sable de l’arène a parlé…</em><br>Vous venez de perdre votre place de numéro <strong>#{oldRanking}</strong> dans le classement du jeu <strong>🏛️ {gameModeUpper}</strong>.",
+    "en": "<em>🏟️ The sands of the arena have spoken…</em><br>You just lost your spot <strong>#{oldRanking}</strong> in the <strong>🏛️ {gameModeUpper}</strong> leaderboard."
+  },
+  "alert_out_ranking_new_gladiator": {
+    "fr": "C'est le <strong>gladiateur</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> qui vous détrône, il a frappé fort avec un chrono de <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong> !",
+    "en": "It was <strong>gladiator</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> who dethroned you, striking hard with a time of <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong>!"
+  },
+  "alert_out_ranking_your_time": {
+    "fr": "<em>Votre chrono héroïque à vous est de :</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>",
+    "en": "<em>Your heroic time is:</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>"
+  },
+  "alert_out_ranking_motivation": {
+    "fr": "<span style=\"font-size:1.1em;\">⚔️ Le combat n’est jamais terminé.<br><strong>Reprenez votre glaive et défendez votre honneur !</strong></span>",
+    "en": "<span style=\"font-size:1.1em;\">⚔️ The fight is never over.<br><strong>Pick up your sword and defend your honor!</strong></span>"
+  },
+  "alert_out_ranking_cta": {
+    "fr": "🏃‍♂️ Rejoignez l’arène sans tarder",
+    "en": "🏃‍♂️ Join the arena now"
+  },
+  "alert_out_ranking_footer": {
+    "fr": "<em>🏅 Gloire à vous, gladiateur de Kanji-Arena !</em><br>— <span style=\"color:#888;\">L’arène romaine</span>",
+    "en": "<em>🏅 Glory to you, gladiator of Kanji-Arena!</em><br>— <span style=\"color:#888;\">The Roman Arena</span>"
   }
-  
+}

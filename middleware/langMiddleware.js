@@ -3,7 +3,7 @@ module.exports = (req, res, next) => {
     const langMatch = req.path.match(/^\/api\/(fr|en)(\/|$)/);
 
     if (!langMatch) {
-        const fallbackLang = 'fr';
+        const fallbackLang = 'en'; // Langue par défaut
         const pathWithoutApiPrefix = req.path.replace(/^\/api\/[^\/]+/, '');
         const newPath = `/api/${fallbackLang}${pathWithoutApiPrefix}`;
         return res.redirect(302, newPath);

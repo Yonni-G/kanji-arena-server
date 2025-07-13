@@ -1,8 +1,8 @@
 // controllers/userController.js
+
 const User = require("../schemas/userSchema");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-
 const { generateAccessToken } = require("../utils/tokenUtils");
 const jwt = require("jsonwebtoken");
 const { transporter, formatContactMessage } = require("./commonController");
@@ -17,38 +17,33 @@ exports.getUserIdFromAccessToken = async (req, res) => {
         const decoded = jwt.verify(accessToken, process.env.JWT_SECRET);
         return decoded.id;
     } catch (err) {
-        console.log(err);        
+        console.log(err);
         return null;
     }
 };
 
-exports.getAlertOutOfRanking = async (req, res) => {    
-
+exports.getAlertOutOfRanking = async (req, res) => {
     try {
-        const userId = await exports.getUserIdFromAccessToken(req, res);        
-        const user = await User.findOne(
-            { _id: userId }
-        );
+        const userId = await exports.getUserIdFromAccessToken(req, res);
+        const user = await User.findOne({ _id: userId });
 
         if (!user) {
-            return res.status(404).json({ message: "Utilisateur non trouvé." });
+            return res.status(404).json({ message: req.t("user_not_found") });
         }
 
         return res.status(200).json({ alertOutOfRanking: user.alertOutOfRanking });
     } catch (err) {
         console.error("Erreur dans getAlertOutOfRanking:", err);
-        return res.status(500).json({ message: "Erreur serveur." });
+        return res.status(500).json({ message: req.t("server_error") });
     }
 };
 
-exports.setAlertOutOfRanking = async (req, res) => {    
-
+exports.setAlertOutOfRanking = async (req, res) => {
     const userId = await exports.getUserIdFromAccessToken(req, res);
-    
     const { alertOutOfRanking } = req.body;
 
     if (alertOutOfRanking === undefined) {
-        return res.status(400).json({ message: "Le champ 'alertOutOfRanking' est requis." });
+        return res.status(400).json({ message: req.t("alert_out_of_ranking_required") });
     }
 
     try {
@@ -56,97 +51,83 @@ exports.setAlertOutOfRanking = async (req, res) => {
             { _id: userId },
             { alertOutOfRanking },
             { new: true }
-        );       
+        );
 
         if (!user) {
-            return res.status(404).json({ message: "Utilisateur non trouvé." });
+            return res.status(404).json({ message: req.t("user_not_found") });
         }
 
-        return res.status(200).json({ message: "Votre choix a bien été enregistré." });
+        return res.status(200).json({ message: req.t("alert_out_of_ranking_saved") });
     } catch (err) {
         console.error("Erreur dans setAlertOutOfRanking:", err);
-        return res.status(500).json({ message: "Erreur serveur." });
+        return res.status(500).json({ message: req.t("server_error") });
     }
 };
 
 exports.checkResetToken = async (req, res) => {
-    const { resetToken } = req.body; // Récupérer le token depuis le body
-    //return res.status(400).json({ resetToken });
+    const { resetToken } = req.body;
     try {
-        // Vérifier si le token est valide et non expiré
         const user = await User.findOne({ resetToken, resetTokenExpiration: { $gt: Date.now() } });
-        if (!user) return res.status(400).json({ message: "Votre lien de réinitialisation a expiré ou est invalide. Veuillez demander un nouveau lien." });
+        if (!user) return res.status(400).json({ message: req.t("reset_link_invalid_or_expired") });
 
-        return res.status(200).json({ message: "Reset token valide" });
+        return res.status(200).json({ message: req.t("reset_token_valid") });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ message: "Erreur serveur" });
+        return res.status(500).json({ message: req.t("server_error") });
     }
-}
+};
 
 // Inscription d'un utilisateur
 exports.register = async (req, res, next) => {
     try {
         console.log("Register request received:", req.body);
-        // Récupérer les données du formulaire
         const { username, nationality, email, password, confirmPassword } = req.body;
 
-        // Vérifier si tous les champs sont remplis
         if (!username || !nationality || !email || !password || !confirmPassword) {
-            return res.status(400).json({ message: "Tous les champs sont requis" });
+            return res.status(400).json({ message: req.t("all_fields_required") });
         }
 
-        // Vérifier la validité de la nationalité
-        const nationalityPattern = /^[a-zA-Z]{2}$/; // Format pour les codes de pays à deux lettres
+        const nationalityPattern = /^[a-zA-Z]{2}$/;
         if (!nationalityPattern.test(nationality)) {
-            return res.status(400).json({ message: "Saisissez un code de nationalité valide (2 lettres)" });
+            return res.status(400).json({ message: req.t("invalid_nationality_code") });
         }
 
-        // Vérifier la validité de l'email
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            return res.status(400).json({ message: "Saisissez une adresse email correcte" });
+            return res.status(400).json({ message: req.t("invalid_email") });
         }
 
-        // Vérifier la longueur du nom d'utilisateur avec le même pattern que le front
         const usernamePattern = /^[a-zA-Z0-9]{3,12}$/;
         if (!usernamePattern.test(username)) {
-            return res.status(400).json({ message: "Le nom d'utilisateur doit contenir entre 3 et 12 caractères alphanumériques" });
+            return res.status(400).json({ message: req.t("invalid_username_length") });
         }
 
-        // on controle le même pattern du mdp que le front
-        // Vérifier la force du mot de passe
         const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordPattern.test(password)) {
-            return res.status(400).json({ message: "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial" });
+            return res.status(400).json({ message: req.t("weak_password") });
         }
 
-        // Vérifier si les mots de passe correspondent
         if (password !== confirmPassword) {
-            return res.status(400).json({ message: "Les mots de passe ne correspondent pas !" });
+            return res.status(400).json({ message: req.t("passwords_do_not_match") });
         }
 
         const existingUsername = await User.findOne({ username: new RegExp(`^${username}$`, 'i') });
         if (existingUsername) {
-            return res.status(400).json({ message: "Désolé ! Ce pseudo est déjà utilisé ! Trouves-en un autre !" });
+            return res.status(400).json({ message: req.t("username_taken") });
         }
 
         const existingEmail = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
         if (existingEmail) {
-            return res.status(400).json({ message: "Cette adresse email est déjà utilisée !" });
+            return res.status(400).json({ message: req.t("email_taken") });
         }
 
-        // Créer un nouvel utilisateur
         const user = new User({ username, nationality, email: email.toLowerCase(), password });
-
-        // Sauvegarder l'utilisateur dans la base de données
         await user.save();
 
-        // Répondre avec un message de succès
-        return res.status(201).json({ message: "Vous êtes bien inscrit à Kanji-Arena ! Connectez-vous dès maintenant pour commencer à jouer !" });
+        return res.status(201).json({ message: req.t("register_success") });
     } catch (error) {
-        console.log(error);        
-        return res.status(500).json({ message: "Erreur technique. Veuillez réessayer ultérieurement." });
+        console.log(error);
+        return res.status(500).json({ message: req.t("technical_error") });
     }
 };
 
@@ -155,34 +136,29 @@ exports.login = async (req, res, next) => {
     try {
         const { email, password } = req.body;
 
-        // Vérifier si tous les champs sont remplis
         if (!email || !password) {
-            return res.status(400).json({ message: "Tous les champs sont requis" });
+            return res.status(400).json({ message: req.t("all_fields_required") });
         }
 
-        // Vérifier la validité de l'email
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            return res.status(400).json({ message: "Saisissez une adresse email correcte" });
+            return res.status(400).json({ message: req.t("invalid_email") });
         }
 
-        // on controle le même pattern du mdp que le front
-        // Vérifier la force du mot de passe
         const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        
         if (!passwordPattern.test(password)) {
-            return res.status(400).json({ message: "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial" });
+            return res.status(400).json({ message: req.t("weak_password") });
         }
 
         const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ message: "Vos identifiants sont invalides, veuillez réessayer." });
+            return res.status(401).json({ message: req.t("invalid_credentials") });
         }
 
         const accessToken = generateAccessToken(user);
         await user.save();
 
-        return res.json({ accessToken, message: "Bienvenue, vous pouvez jouer à Kanji-Arena !" });
+        return res.json({ accessToken, message: req.t("login_success") });
     } catch (error) {
         next(error);
     }
@@ -190,27 +166,24 @@ exports.login = async (req, res, next) => {
 
 // Forgot password (envoi du lien de réinitialisation)
 exports.forgotPassword = async (req, res, next) => {
-
     try {
         const { email } = req.body;
 
-        // Vérifier si tous les champs sont remplis
         if (!email) {
-            return res.status(400).json({ message: "Tous les champs sont requis" });
+            return res.status(400).json({ message: req.t("all_fields_required") });
         }
 
-        // Vérifier la validité de l'email
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailPattern.test(email)) {
-            return res.status(400).json({ message: "Saisissez une adresse email correcte" });
+            return res.status(400).json({ message: req.t("invalid_email") });
         }
 
         const user = await User.findOne({ email });
-        if (!user) return res.status(200).json({ message: "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé !" });
+        if (!user) return res.status(200).json({ message: req.t("reset_link_sent") });
 
         const token = crypto.randomBytes(32).toString("hex");
         user.resetToken = token;
-        user.resetTokenExpiration = Date.now() + 14400000; // 4 heure de validité du token
+        user.resetTokenExpiration = Date.now() + 14400000; // 4 heures
         await user.save();
 
         const resetLink = `${process.env.FRONTEND_URL}/reset-password/${token}`;
@@ -218,11 +191,11 @@ exports.forgotPassword = async (req, res, next) => {
         await transporter.sendMail({
             from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: "Réinitialisation du mot de passe",
-            text: `Cliquez sur ce lien pour réinitialiser votre mot de passe : ${resetLink}`,
+            subject: req.t("reset_email_subject"),
+            text: req.t("reset_email_body", { resetLink }),
         });
 
-        res.status(200).json({ message: "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé." });
+        res.status(200).json({ message: req.t("reset_link_sent") });
     } catch (error) {
         next(error);
     }
@@ -233,29 +206,25 @@ exports.resetPassword = async (req, res, next) => {
     try {
         const { token, password, confirmPassword } = req.body;
 
-        // Vérifier si tous les champs sont remplis
         if (!token || !password || !confirmPassword) {
-            return res.status(400).json({ message: "Tous les champs sont requis" });
+            return res.status(400).json({ message: req.t("all_fields_required") });
         }
-        // Vérifier la force du mot de passe
         const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordPattern.test(password)) {
-            return res.status(400).json({ message: "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial" });
+            return res.status(400).json({ message: req.t("weak_password") });
         }
-        // Vérifier si les mots de passe correspondent
         if (password !== confirmPassword) {
-            return res.status(400).json({ message: "Les mots de passe ne correspondent pas" });
+            return res.status(400).json({ message: req.t("passwords_do_not_match") });
         }
-        // Vérifier la validité du token
         const user = await User.findOne({ resetToken: token, resetTokenExpiration: { $gt: Date.now() } });
-        if (!user) return res.status(400).json({ message: "Token invalide ou expiré" });
+        if (!user) return res.status(400).json({ message: req.t("reset_token_invalid_or_expired") });
 
         user.password = password;
         user.resetToken = undefined;
         user.resetTokenExpiration = undefined;
         await user.save();
 
-        return res.status(200).json({ message: 'Mot de passe modifié avec succès ! Vous pouvez dès à présent vous connecter à nouveau.' });
+        return res.status(200).json({ message: req.t("password_reset_success") });
     } catch (error) {
         next(error);
     }
