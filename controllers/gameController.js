@@ -26,6 +26,10 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
         { $sample: { size: nb_kanjis_choices } }
     ]);
 
+    // ici on fait un petit hack : si la langue est "ja", on force à "en" pour éviter les problèmes de traduction
+    if (lang === 'ja') {
+        lang = 'en';
+    }
     return kanjis.map(k => {
         const meanings = k[`meaning-${lang}`] || [];
         // on recupere le premier sens du kanji, on considère que c'est le plus pertinent

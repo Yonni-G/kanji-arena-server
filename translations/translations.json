@@ -1,154 +1,192 @@
 {
   "user_not_found": {
     "fr": "Utilisateur non trouvé.",
-    "en": "User not found."
+    "en": "User not found.",
+    "ja": "ユーザーが見つかりません。"
   },
   "server_error": {
     "fr": "Erreur serveur.",
-    "en": "Server error."
+    "en": "Server error.",
+    "ja": "サーバーエラーです。"
   },
   "alert_out_of_ranking_required": {
     "fr": "Le champ 'alertOutOfRanking' est requis.",
-    "en": "'alertOutOfRanking' field is required."
+    "en": "'alertOutOfRanking' field is required.",
+    "ja": "'alertOutOfRanking' フィールドは必須です。"
   },
   "alert_out_of_ranking_saved": {
     "fr": "Votre choix a bien été enregistré.",
-    "en": "Your choice has been saved."
+    "en": "Your choice has been saved.",
+    "ja": "あなたの選択が保存されました。"
   },
   "reset_link_invalid_or_expired": {
     "fr": "Votre lien de réinitialisation a expiré ou est invalide. Veuillez demander un nouveau lien.",
-    "en": "Your reset link has expired or is invalid. Please request a new one."
+    "en": "Your reset link has expired or is invalid. Please request a new one.",
+    "ja": "リセット用リンクが無効または期限切れです。新しいリンクをリクエストしてください。"
   },
   "reset_token_valid": {
     "fr": "Reset token valide",
-    "en": "Reset token is valid"
+    "en": "Reset token is valid",
+    "ja": "リセットトークンは有効です"
   },
   "all_fields_required": {
     "fr": "Tous les champs sont requis",
-    "en": "All fields are required"
+    "en": "All fields are required",
+    "ja": "すべての項目は必須です"
   },
   "invalid_nationality_code": {
     "fr": "Saisissez un code de nationalité valide (2 lettres)",
-    "en": "Enter a valid nationality code (2 letters)"
+    "en": "Enter a valid nationality code (2 letters)",
+    "ja": "有効な国籍コード（2文字）を入力してください"
   },
   "invalid_email": {
     "fr": "Saisissez une adresse email correcte",
-    "en": "Enter a valid email address"
+    "en": "Enter a valid email address",
+    "ja": "正しいメールアドレスを入力してください"
   },
   "invalid_username_length": {
     "fr": "Le nom d'utilisateur doit contenir entre 3 et 12 caractères alphanumériques",
-    "en": "Username must be 3 to 12 alphanumeric characters"
+    "en": "Username must be 3 to 12 alphanumeric characters",
+    "ja": "ユーザー名は3～12文字の英数字で入力してください"
   },
   "weak_password": {
     "fr": "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial",
-    "en": "Password must be at least 8 characters, with uppercase, lowercase, number and special character"
+    "en": "Password must be at least 8 characters, with uppercase, lowercase, number and special character",
+    "ja": "パスワードは8文字以上で、大文字・小文字・数字・記号を含めてください"
   },
   "passwords_do_not_match": {
     "fr": "Les mots de passe ne correspondent pas !",
-    "en": "Passwords do not match!"
+    "en": "Passwords do not match!",
+    "ja": "パスワードが一致しません！"
   },
   "username_taken": {
     "fr": "Désolé ! Ce pseudo est déjà utilisé ! Trouves-en un autre !",
-    "en": "Sorry! This username is already taken! Please choose another one!"
+    "en": "Sorry! This username is already taken! Please choose another one!",
+    "ja": "申し訳ありません！このユーザー名は既に使用されています。別の名前を選んでください！"
   },
   "email_taken": {
     "fr": "Cette adresse email est déjà utilisée !",
-    "en": "This email address is already in use!"
+    "en": "This email address is already in use!",
+    "ja": "このメールアドレスは既に使用されています！"
   },
   "register_success": {
     "fr": "Vous êtes bien inscrit à Kanji-Arena ! Connectez-vous dès maintenant pour commencer à jouer !",
-    "en": "You have successfully registered to Kanji-Arena! Log in now to start playing!"
+    "en": "You have successfully registered to Kanji-Arena! Log in now to start playing!",
+    "ja": "Kanji-Arenaへの登録が完了しました！今すぐログインしてプレイを始めましょう！"
   },
   "technical_error": {
     "fr": "Erreur technique. Veuillez réessayer ultérieurement.",
-    "en": "Technical error. Please try again later."
+    "en": "Technical error. Please try again later.",
+    "ja": "技術的なエラーが発生しました。しばらくしてから再度お試しください。"
   },
   "invalid_credentials": {
     "fr": "Vos identifiants sont invalides, veuillez réessayer.",
-    "en": "Invalid credentials, please try again."
+    "en": "Invalid credentials, please try again.",
+    "ja": "認証情報が正しくありません。もう一度お試しください。"
   },
   "login_success": {
     "fr": "Bienvenue, vous pouvez jouer à Kanji-Arena !",
-    "en": "Welcome, you can now play Kanji-Arena!"
+    "en": "Welcome, you can now play Kanji-Arena!",
+    "ja": "ようこそ！Kanji-Arenaでプレイできます！"
   },
   "reset_link_sent": {
     "fr": "Si un compte utilisateur existe avec cette adresse email, un lien de réinitialisation vous a été envoyé.",
-    "en": "If a user account exists with this email address, a reset link has been sent."
+    "en": "If a user account exists with this email address, a reset link has been sent.",
+    "ja": "このメールアドレスでユーザーアカウントが存在する場合、リセット用リンクを送信しました。"
   },
   "reset_email_subject": {
     "fr": "Réinitialisation du mot de passe",
-    "en": "Password reset"
+    "en": "Password reset",
+    "ja": "パスワードリセット"
   },
   "reset_email_body": {
     "fr": "Cliquez sur ce lien pour réinitialiser votre mot de passe : {resetLink}",
-    "en": "Click this link to reset your password: {resetLink}"
+    "en": "Click this link to reset your password: {resetLink}",
+    "ja": "このリンクをクリックしてパスワードをリセットしてください: {resetLink}"
   },
   "reset_token_invalid_or_expired": {
     "fr": "Token invalide ou expiré",
-    "en": "Token invalid or expired"
+    "en": "Token invalid or expired",
+    "ja": "トークンが無効または期限切れです"
   },
   "password_reset_success": {
     "fr": "Mot de passe modifié avec succès ! Vous pouvez dès à présent vous connecter à nouveau.",
-    "en": "Password successfully changed! You can now log in again."
+    "en": "Password successfully changed! You can now log in again.",
+    "ja": "パスワードが正常に変更されました！再度ログインできます。"
   },
   "game_error_unable_starting_game": {
     "fr": "Impossible de démarrer le jeu !",
-    "en": "Not able to start the game!"
+    "en": "Not able to start the game!",
+    "ja": "ゲームを開始できません！"
   },
   "game_label_anonymous": {
     "fr": "Anonyme",
-    "en": "Anonymous"
+    "en": "Anonymous",
+    "ja": "匿名"
   },
   "game_error_unable_loading_ranking": {
     "fr": "Impossible de charger le classement !",
-    "en": "Not able to load the ranking!"
+    "en": "Not able to load the ranking!",
+    "ja": "ランキングを読み込めません！"
   },
   "game_error_missing_answer_parameters": {
     "fr": "Tous les paramètres sont requis !",
-    "en": "All parameters are required!"
+    "en": "All parameters are required!",
+    "ja": "すべてのパラメータが必要です！"
   },
   "game_error_server": {
     "fr": "Erreur du serveur !",
-    "en": "Server error!"
+    "en": "Server error!",
+    "ja": "サーバーエラー！"
   },
   "error_expired_token": {
     "fr": "Token expiré !",
-    "en": "Expired token!"
+    "en": "Expired token!",
+    "ja": "トークンの有効期限が切れています！"
   },
   "error_invalid_token": {
     "fr": "Token invalide !",
-    "en": "Invalid token!"
+    "en": "Invalid token!",
+    "ja": "トークンが無効です！"
   },
   "alert_out_ranking_subject": {
     "fr": "⚔️ {username}, votre place #{oldRanking} a été conquise dans l’arène {gameModeUpper}",
-    "en": "⚔️ {username}, your spot #{oldRanking} was conquered in the {gameModeUpper} arena"
+    "en": "⚔️ {username}, your spot #{oldRanking} was conquered in the {gameModeUpper} arena",
+    "ja": "⚔️ {username} さん、あなたの順位 #{oldRanking} は {gameModeUpper} アリーナで奪われました"
   },
   "alert_out_ranking_greeting": {
     "fr": "🛡️ Ave, {username} !",
-    "en": "🛡️ Hail, {username}!"
+    "en": "🛡️ Hail, {username}!",
+    "ja": "🛡️ アヴェ、{username} さん！"
   },
   "alert_out_ranking_intro": {
     "fr": "<em>🏟️ Le sable de l’arène a parlé…</em><br>Vous venez de perdre votre place de numéro <strong>#{oldRanking}</strong> dans le classement du jeu <strong>🏛️ {gameModeUpper}</strong>.",
-    "en": "<em>🏟️ The sands of the arena have spoken…</em><br>You just lost your spot <strong>#{oldRanking}</strong> in the <strong>🏛️ {gameModeUpper}</strong> leaderboard."
+    "en": "<em>🏟️ The sands of the arena have spoken…</em><br>You just lost your spot <strong>#{oldRanking}</strong> in the <strong>🏛️ {gameModeUpper}</strong> leaderboard.",
+    "ja": "<em>🏟️ アリーナの砂が語った…</em><br>あなたは <strong>#{oldRanking}</strong> 位の座を <strong>🏛️ {gameModeUpper}</strong> のランキングで失いました。"
   },
   "alert_out_ranking_new_gladiator": {
     "fr": "C'est le <strong>gladiateur</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> qui vous détrône, il a frappé fort avec un chrono de <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong> !",
-    "en": "It was <strong>gladiator</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> who dethroned you, striking hard with a time of <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong>!"
+    "en": "It was <strong>gladiator</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> who dethroned you, striking hard with a time of <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong>!",
+    "ja": "<strong>剣闘士</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> があなたを打ち破り、<strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong> のタイムで強烈な一撃を放ちました！"
   },
   "alert_out_ranking_your_time": {
     "fr": "<em>Votre chrono héroïque à vous est de :</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>",
-    "en": "<em>Your heroic time is:</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>"
+    "en": "<em>Your heroic time is:</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>",
+    "ja": "<em>あなたの英雄的なタイム：</em> <strong style=\"color:#007bff;\">⏳ {formattedOld}</strong>"
   },
   "alert_out_ranking_motivation": {
     "fr": "<span style=\"font-size:1.1em;\">⚔️ Le combat n’est jamais terminé.<br><strong>Reprenez votre glaive et défendez votre honneur !</strong></span>",
-    "en": "<span style=\"font-size:1.1em;\">⚔️ The fight is never over.<br><strong>Pick up your sword and defend your honor!</strong></span>"
+    "en": "<span style=\"font-size:1.1em;\">⚔️ The fight is never over.<br><strong>Pick up your sword and defend your honor!</strong></span>",
+    "ja": "<span style=\"font-size:1.1em;\">⚔️ 戦いは終わりません。<br><strong>剣を取り、名誉を守りましょう！</strong></span>"
   },
   "alert_out_ranking_cta": {
     "fr": "🏃‍♂️ Rejoignez l’arène sans tarder",
-    "en": "🏃‍♂️ Join the arena now"
+    "en": "🏃‍♂️ Join the arena now",
+    "ja": "🏃‍♂️ 今すぐアリーナに参加しよう"
   },
   "alert_out_ranking_footer": {
     "fr": "<em>🏅 Gloire à vous, gladiateur de Kanji-Arena !</em><br>— <span style=\"color:#888;\">L’arène romaine</span>",
-    "en": "<em>🏅 Glory to you, gladiator of Kanji-Arena!</em><br>— <span style=\"color:#888;\">The Roman Arena</span>"
+    "en": "<em>🏅 Glory to you, gladiator of Kanji-Arena!</em><br>— <span style=\"color:#888;\">The Roman Arena</span>",
+    "ja": "<em>🏅 Kanji-Arenaの剣闘士に栄光あれ！</em><br>— <span style=\"color:#888;\">ローマのアリーナ</span>"
   }
 }

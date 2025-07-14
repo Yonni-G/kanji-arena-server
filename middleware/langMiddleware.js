@@ -1,6 +1,6 @@
 // middleware/langMiddleware.js
 module.exports = (req, res, next) => {
-    const langMatch = req.path.match(/^\/api\/(fr|en)(\/|$)/);
+    const langMatch = req.path.match(/^\/api\/(fr|en|ja)(\/|$)/);
 
     if (!langMatch) {
         const fallbackLang = 'en'; // Langue par défaut
