@@ -16,30 +16,28 @@ const { createTranslator } = require('./translations/translator');
 
 dotenv.config();
 const app = express();
+
+const allowedOrigins = [
+    "http://localhost:4200",
+    "https://www.kanji-arena.com",
+    "https://kanji-arena.com",
+    "https://dev.kanji-arena.com",
+];
+
+
 const corsOptions = {
-    origin: (origin, callback) => {
-        console.log("Origin reçu :", origin);
+    origin: (origin, callback) => {        
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            console.log("Origin non autorisé :", origin);
             callback(new Error("Not allowed by CORS"));
         }
     },
     credentials: true,
+    exposedHeaders: ['Authorization']
 };
 
-console.log("Serveur démarré");
-
-// Log toutes les requêtes
-app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
-    next();
-});
-
-// CORS
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(cookieParser());
