@@ -24,6 +24,10 @@ const allowedOrigins = [
     "https://dev.kanji-arena.com",
 ];
 
+app.use((req, res, next) => {
+    console.log(`[${req.method}] ${req.url} | Origin: ${req.headers.origin}`);
+    next();
+});
 
 const corsOptions = {
     origin: (origin, callback) => {
