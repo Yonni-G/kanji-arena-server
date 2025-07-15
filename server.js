@@ -21,7 +21,7 @@ const allowedOrigins = [
     "http://localhost:4200",
     "https://www.kanji-arena.com",
     "https://kanji-arena.com",
-    "https//dev.kanji-arena.com",
+    "https://dev.kanji-arena.com",
 ];
 
 
