@@ -38,7 +38,12 @@ const corsOptions = {
     exposedHeaders: ['Authorization']
 };
 
-app.use(cors(corsOptions));
+//app.use(cors(corsOptions));
+app.use(cors({
+    origin: '*',
+    credentials: true,
+}));
+
 
 app.use(express.json());
 app.use(cookieParser());
