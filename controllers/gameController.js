@@ -26,7 +26,7 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
         { $sample: { size: nb_kanjis_choices } }
     ]);
 
-    // ici on fait un petit hack comme on a pas les sens japonais : si la langue est "ja", on force à "en" pour éviter les problèmes de traduction
+    // ici on fait un petit hack comme on a pas les sens japonais : si la langue est "ja", on force à "en" pour recuperer les traduction anglaises
     if (lang === 'ja') {
         lang = 'en';
     }
