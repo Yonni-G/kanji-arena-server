@@ -11,7 +11,7 @@ const User = require("../schemas/userSchema");
 
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
+const NB_SUCCESS_FOR_WINNING = 1; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
 const NB_LIMIT_ALERT_RANKING = 100; // Seuls les X premiers joueurs sont notifiés que leur score a été battu
 
@@ -26,7 +26,7 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
         { $sample: { size: nb_kanjis_choices } }
     ]);
 
-    // ici on fait un petit hack : si la langue est "ja", on force à "en" pour éviter les problèmes de traduction
+    // ici on fait un petit hack comme on a pas les sens japonais : si la langue est "ja", on force à "en" pour éviter les problèmes de traduction
     if (lang === 'ja') {
         lang = 'en';
     }
@@ -325,7 +325,7 @@ async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
         .sort({ chrono: 1 }) // tri croissant
         .skip(ranking)       // saute les meilleurs + le nouveau
         .limit(1)            // prend le suivant
-        .populate('userId', 'username email alertOutOfRanking');
+        .populate('userId', 'username nationality email alertOutOfRanking');
 
 
     if (!chronos.length) {
@@ -353,7 +353,6 @@ async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
 
         // 5. Envoie la notification (ici exemple par email)
         sendOutOfRankingNotification({
-            req: req,
             user: ejectedChrono.userId,
             oldChrono: ejectedChrono.chrono,
             newUser,
@@ -370,51 +369,43 @@ async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
     }
 }
 
-async function sendOutOfRankingNotification({ req, user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
+async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
+    const { createTranslator } = require('../translations/translator');
+
     const formattedOld = formatChrono(oldChrono);
     const formattedNew = formatChrono(newChrono);
-
     const gameModeUpper = gameMode.toUpperCase();
     const arenaUrl = `${process.env.EMAIL_USER}/games/${gameMode}`;
 
-    // On suppose que req.t est déjà injecté via le middleware
+    /* ici on charge le texte du mail dans la langue du user battu */
+    const userLang = user.nationality === 'fr' ? 'fr' :
+        user.nationality === 'jp' ? 'ja' : 'en';
+
+    const t = createTranslator(userLang);
+
     await transporter.sendMail({
         from: `"Kanji-Arena" <${process.env.EMAIL_USER}>`,
         to: user.email,
-        subject: req.t("alert_out_ranking_subject", {
+        subject: t("alert_out_ranking_subject", {
             username: user.username,
             oldRanking,
-            gameModeUpper
+            gameModeUpper,
         }),
         html: `
-<p style="font-size:1.2em;"><strong>${req.t("alert_out_ranking_greeting", { username: user.username })}</strong></p>
+<p style="font-size:1.2em;"><strong>${t("alert_out_ranking_greeting", { username: user.username })}</strong></p>
 
-<p>
-  ${req.t("alert_out_ranking_intro", { oldRanking, gameModeUpper })}
-</p>
-
-<p>
-  ${req.t("alert_out_ranking_new_gladiator", { newUsername: newUser.username, formattedNew })}
-</p>
-
-<p>
-  ${req.t("alert_out_ranking_your_time", { formattedOld })}
-</p>
-
-<p>
-  ${req.t("alert_out_ranking_motivation")}
-</p>
+<p>${t("alert_out_ranking_intro", { oldRanking, gameModeUpper })}</p>
+<p>${t("alert_out_ranking_new_gladiator", { newUsername: newUser.username, formattedNew })}</p>
+<p>${t("alert_out_ranking_your_time", { formattedOld })}</p>
+<p>${t("alert_out_ranking_motivation")}</p>
 
 <p>
   <a href="${arenaUrl}" style="background:#ffd700;color:#222;padding:10px 18px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px;">
-    ${req.t("alert_out_ranking_cta")}
+    ${t("alert_out_ranking_cta")}
   </a>
 </p>
 
-<p style="margin-top:2em;">
-  ${req.t("alert_out_ranking_footer")}
-</p>
-`
+<p style="margin-top:2em;">${t("alert_out_ranking_footer")}</p>
+        `
     });
-
 }
