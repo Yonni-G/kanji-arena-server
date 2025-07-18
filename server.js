@@ -25,11 +25,11 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-    origin: (origin, callback) => {        
+    origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            console.log(origin)
+            console.log("Origin non autorisé :", origin);
             callback(new Error("Not allowed by CORS"));
         }
     },
@@ -72,4 +72,4 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port : ${PORT}`));
