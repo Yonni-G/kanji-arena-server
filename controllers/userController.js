@@ -97,12 +97,13 @@ exports.register = async (req, res, next) => {
             return res.status(400).json({ message: req.t("invalid_email") });
         }
 
+        //const usernamePattern = /^[\p{L}\d]{3,12}$/u; // \p{L} = toute lettre unicode, \d = chiffre
         const usernamePattern = /^[a-zA-Z0-9]{3,12}$/;
         if (!usernamePattern.test(username)) {
             return res.status(400).json({ message: req.t("invalid_username_length") });
         }
 
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",.<>?/~]).{8,}$/;
         if (!passwordPattern.test(password)) {
             return res.status(400).json({ message: req.t("weak_password") });
         }
