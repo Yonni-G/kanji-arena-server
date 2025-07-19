@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const ChronoClassic = require('../models/ChronoClassic');
 const ChronoReverse = require('../models/ChronoReverse');
 const GameMode = require('../models/GameMode');
+const JlptGrade = require('../models/JlptGrade');
 const { generateGameToken, encryptPayload, decryptPayload } = require('../utils/tokenUtils');
 const { getUserIdFromAccessToken } = require('../controllers/userController');
 const KanjiDB = require('../schemas/kanjiSchema');
@@ -21,8 +22,10 @@ const modelMap = {
     // ajouter d'autres modes ici
 };
 
-const _getKanjis = async (nb_kanjis_choices, lang) => {
+const _getKanjis = async (nb_kanjis_choices, lang, jlptGrade) => {
+    
     const kanjis = await KanjiDB.aggregate([
+        { $match: { jlpt: { $gte: jlptGrade } } }, // JLPT >= niveau choisi
         { $sample: { size: nb_kanjis_choices } }
     ]);
 
@@ -61,15 +64,15 @@ const _getKanjis = async (nb_kanjis_choices, lang) => {
     }
 */
 
-async function generateResponse(success, startTime, getCardFunction, lang) {
+async function generateResponse(success, startTime, getCardFunction, lang, jlptGrade) {
 
     // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
     const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
     // on va créer un nouveau token de game
-    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime }));
+    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime, jlptGrade }));
     //console.log(gameToken)
     // on crée une question
-    const card = await _getCard(getCardFunction, correctIndex, lang)
+    const card = await _getCard(getCardFunction, correctIndex, lang, jlptGrade)
     //console.log(card);
     const response = {
         gameToken: gameToken,
@@ -78,10 +81,10 @@ async function generateResponse(success, startTime, getCardFunction, lang) {
     return response;
 }
 
-const _getCard = async (getCardFunction, correctIndex, lang) => {
+const _getCard = async (getCardFunction, correctIndex, lang, jlptGrade) => {
 
     // on recupere x kanjis au hasard
-    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang);
+    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang, jlptGrade);
     //console.log(kanjis_list);
 
     // on construit notre card
@@ -134,11 +137,12 @@ exports.getReverseCard = function (kanjis_list, correctIndex) {
 // 1/ un token de jeu qui contient dans son payload :
 //  - le startTime
 //  - le nombre de succès
-// 2/ une card
+// 2/ une card de niveau jlptGrade
 exports.startGame = (getCardFunction) => {
     return async (req, res) => {
         try {
-            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang);
+            const jlptGrade = Number(req.params.jlpt); 
+            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang, jlptGrade);
             return res.status(200).json(response)
         } catch (error) {
             console.log(error)
@@ -147,11 +151,12 @@ exports.startGame = (getCardFunction) => {
     }
 }
 exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
-    const Model = modelMap[gameMode];
+    const Model = modelMap[gameMode];    
     return async (req, res) => {
         try {
+            const jlptGrade = Number(req.params.jlpt); 
             const [topChronos, totalChronos] = await Promise.all([
-                Model.find()
+                Model.find({ jlpt: jlptGrade })
                     .sort({ chrono: 1 })                        // tri croissant
                     .limit(NB_LIMIT_RANKING)                    // top N
                     .populate('userId', 'username nationality')             // jointure Users
@@ -166,7 +171,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
                         });
                     }),
 
-                Model.countDocuments()                            // total de tous les chronos
+                Model.countDocuments({ jlpt: jlptGrade })                            // total de tous les chronos
             ]);
 
             // Ensuite, tu peux retourner ou utiliser `topChronos` et `totalChronos` comme d'habitude.
@@ -189,17 +194,19 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             const userId = await getUserIdFromAccessToken(req, res);
 
             if(userId) {
-                const bestChrono = await Model.findOne({ userId })
+                const bestChrono = await Model
+                .findOne({ userId, jlpt: jlptGrade })
                 .sort({ chrono: 1 })
                 .populate('userId', 'username nationality');
 
                 if (bestChrono) {
-                    const betterCount = await Model.countDocuments({ chrono: { $lt: bestChrono.chrono } });
+                    const betterCount = await Model.countDocuments({ jlpt: jlptGrade, chrono: { $lt: bestChrono.chrono } });
                     const userRank = betterCount + 1;
                     let username = bestChrono.userId?.username || req.t("game_label_anonymous");
                     let nationality = bestChrono.userId?.nationality || 'fr';
                     userBestChrono = {
                         chronoValue: bestChrono.chrono,
+                        jlptGrade: jlptGrade,
                         ranking: userRank,
                         username: username,
                         nationality: nationality
@@ -251,12 +258,13 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                         const chrono = new Model({
                             userId: userId,
                             chrono: chronoValue,
+                            jlpt: payload.jlptGrade
                         });
                         await chrono.save();
                         // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
                         // Récupère le joueur qui vient de battre le score
                         const newUser = await User.findById(userId).select('username');
-                        await notifyOutOfRanking(req, chrono, Model, gameMode, newUser);
+                        await notifyOutOfRanking(payload.jlptGrade, chrono, Model, gameMode, newUser);
 
                     } catch (err) {
                         console.error("Erreur lors de l'enregistrement du chrono :", err);
@@ -265,7 +273,8 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                 }
 
                 const betterChronosCount = await Model.countDocuments({
-                    chrono: { $lt: chronoValue }
+                    chrono: { $lt: chronoValue },
+                    jlpt: payload.jlptGrade
                 });
 
                 const ranking = betterChronosCount + 1;
@@ -277,7 +286,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
             }
 
             // on genere une nouvelle response
-            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang);
+            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang, payload.jlptGrade);
 
             // on ajoute "correct" dans l'objet response retourné
             return res.status(200).json({
@@ -305,10 +314,11 @@ function formatChrono(ms) {
         .padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
 }
 
-async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
+async function notifyOutOfRanking(jlptGrade, newChrono, Model, gameMode, newUser) {
     // 1. Déterminer le rang du nouveau chrono
     const betterChronosCount = await Model.countDocuments({
-        chrono: { $lt: newChrono.chrono }
+        chrono: { $lt: newChrono.chrono },
+        jlpt: jlptGrade
     });
     const ranking = betterChronosCount + 1;
 
@@ -320,8 +330,8 @@ async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
     console.log(`Le chrono ${newChrono.chrono} est au rang ${ranking}, notification.`);
 
     // 3. Trouver le chrono qui vient d'être éjecté du top
-
     const chronos = await Model.find()
+        .find({jlpt: jlptGrade})
         .sort({ chrono: 1 }) // tri croissant
         .skip(ranking)       // saute les meilleurs + le nouveau
         .limit(1)            // prend le suivant
@@ -343,7 +353,7 @@ async function notifyOutOfRanking(req, newChrono, Model, gameMode, newUser) {
         && (!newUser || String(ejectedChrono.userId._id) !== String(newUser._id)) // <-- évite de notifier le joueur qui vient de battre son propre chrono
     ) {
         // 4bis. Vérifier si c'était son meilleur chrono
-        const bestChrono = await Model.findOne({ userId: ejectedChrono.userId._id })
+        const bestChrono = await Model.findOne({ jlpt: jlptGrade, userId: ejectedChrono.userId._id })
             .sort({ chrono: 1 });
 
         if (!bestChrono || String(bestChrono._id) !== String(ejectedChrono._id)) {
