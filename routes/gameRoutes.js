@@ -7,14 +7,14 @@ const { startGame, getClassicCard, getReverseCard, checkAnswer, loadRanking } = 
 // TODO : factoriser
 
 // Route pour le mode classic
-router.get('/classic/start', startGame(getClassicCard));
+router.get('/classic/:jlpt(5|4|3|2|1)/start', startGame(getClassicCard));
 router.post('/classic/checkAnswer', checkAnswer(getClassicCard, 'classic'));
-router.get('/classic/ranking', loadRanking('classic'));
+router.get('/classic/:jlpt(5|4|3|2|1)/ranking', loadRanking('classic'));
 
 // Route pour le mode reverse
-router.get('/reverse/start', startGame(getReverseCard));
+router.get('/reverse/:jlpt(5|4|3|2|1)/start', startGame(getReverseCard));
 router.post('/reverse/checkAnswer', checkAnswer(getReverseCard, 'reverse'));
-router.get('/reverse/ranking', loadRanking('reverse'));
+router.get('/reverse/:jlpt(5|4|3|2|1)/ranking', loadRanking('reverse'));
 
 
 const { authMiddleware } = require("../middleware/authMiddleware");
