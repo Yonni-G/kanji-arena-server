@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const ChronoClassic = require('../models/ChronoClassic');
 const ChronoReverse = require('../models/ChronoReverse');
 const GameMode = require('../models/GameMode');
-const JlptGrade = require('../models/JlptGrade');
 const { generateGameToken, encryptPayload, decryptPayload } = require('../utils/tokenUtils');
 const { getUserIdFromAccessToken } = require('../controllers/userController');
 const KanjiDB = require('../schemas/kanjiSchema');
