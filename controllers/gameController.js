@@ -363,6 +363,7 @@ async function notifyOutOfRanking(jlptGrade, newChrono, Model, gameMode, newUser
         // 5. Envoie la notification (ici exemple par email)
         sendOutOfRankingNotification({
             user: ejectedChrono.userId,
+            jlptGrade: jlptGrade,
             oldChrono: ejectedChrono.chrono,
             newUser,
             newChrono: newChrono.chrono,
@@ -378,7 +379,7 @@ async function notifyOutOfRanking(jlptGrade, newChrono, Model, gameMode, newUser
     }
 }
 
-async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
+async function sendOutOfRankingNotification({ user, jlptGrade, oldChrono, newUser, newChrono, gameMode, oldRanking }) {
     const { createTranslator } = require('../translations/translator');
 
     const formattedOld = formatChrono(oldChrono);
@@ -399,11 +400,12 @@ async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChron
             username: user.username,
             oldRanking,
             gameModeUpper,
+            jlptGrade
         }),
         html: `
 <p style="font-size:1.2em;"><strong>${t("alert_out_ranking_greeting", { username: user.username })}</strong></p>
 
-<p>${t("alert_out_ranking_intro", { oldRanking, gameModeUpper })}</p>
+<p>${t("alert_out_ranking_intro", { oldRanking, gameModeUpper, jlptGrade })}</p>
 <p>${t("alert_out_ranking_new_gladiator", { newUsername: newUser.username, formattedNew })}</p>
 <p>${t("alert_out_ranking_your_time", { formattedOld })}</p>
 <p>${t("alert_out_ranking_motivation")}</p>
@@ -415,6 +417,7 @@ async function sendOutOfRankingNotification({ user, oldChrono, newUser, newChron
 </p>
 
 <p style="margin-top:2em;">${t("alert_out_ranking_footer")}</p>
-        `
+`
+
     });
 }
