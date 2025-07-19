@@ -150,9 +150,9 @@
     "ja": "トークンが無効です！"
   },
   "alert_out_ranking_subject": {
-    "fr": "⚔️ {username}, votre place #{oldRanking} a été conquise dans l’arène {gameModeUpper}",
-    "en": "⚔️ {username}, your spot #{oldRanking} was conquered in the {gameModeUpper} arena",
-    "ja": "⚔️ {username} さん、あなたの順位 #{oldRanking} は {gameModeUpper} アリーナで奪われました"
+    "fr": "⚔️ {username}, votre place #{oldRanking} a été conquise dans l’arène {gameModeUpper} (JLPT N{jlptGrade})",
+    "en": "⚔️ {username}, your spot #{oldRanking} was conquered in the {gameModeUpper} arena (JLPT N{jlptGrade})",
+    "ja": "⚔️ {username} さん、あなたの順位 #{oldRanking} は {gameModeUpper} (JLPT N{jlptGrade} アリーナで奪われました"
   },
   "alert_out_ranking_greeting": {
     "fr": "🛡️ Ave, {username} !",
@@ -160,9 +160,9 @@
     "ja": "🛡️ アヴェ、{username} さん！"
   },
   "alert_out_ranking_intro": {
-    "fr": "<em>🏟️ Le sable de l’arène a parlé…</em><br>Vous venez de perdre votre place de numéro <strong>#{oldRanking}</strong> dans le classement du jeu <strong>🏛️ {gameModeUpper}</strong>.",
-    "en": "<em>🏟️ The sands of the arena have spoken…</em><br>You just lost your spot <strong>#{oldRanking}</strong> in the <strong>🏛️ {gameModeUpper}</strong> leaderboard.",
-    "ja": "<em>🏟️ アリーナの砂が語った…</em><br>あなたは <strong>#{oldRanking}</strong> 位の座を <strong>🏛️ {gameModeUpper}</strong> のランキングで失いました。"
+    "fr": "<em>🏟️ Le sable de l’arène a parlé…</em><br>Vous venez de perdre votre place de numéro <strong>#{oldRanking}</strong> dans le classement du jeu <strong>🏛️ {gameModeUpper} (JLPT N{jlptGrade})</strong>.",
+    "en": "<em>🏟️ The sands of the arena have spoken…</em><br>You just lost your spot <strong>#{oldRanking}</strong> in the <strong>🏛️ {gameModeUpper} (JLPT N{jlptGrade}</strong> leaderboard.",
+    "ja": "<em>🏟️ アリーナの砂が語った…</em><br>あなたは <strong>#{oldRanking}</strong> 位の座を <strong>🏛️ {gameModeUpper} (JLPT N{jlptGrade}</strong> のランキングで失いました。"
   },
   "alert_out_ranking_new_gladiator": {
     "fr": "C'est le <strong>gladiateur</strong> <b style=\"color:#b22222;\">{newUsername} 🗡️</b> qui vous détrône, il a frappé fort avec un chrono de <strong style=\"color:#007bff;\">⏱️ {formattedNew}</strong> !",
