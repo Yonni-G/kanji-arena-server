@@ -192,7 +192,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
 
 
                 console.log(payload.success)
-                
+
                 const userId = await getUserIdFromAccessToken(req, res);
                 const chronoValue = Date.now() - payload.startTime;
                 const Model = modelMap[gameMode];
@@ -217,14 +217,14 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                         return res.status(500).json({ error: req.t("game_error_server") });
                     }
 
-                    if (payload.kanjis_list) {
-                        try {
-                            await enregistrerProgressions(userId, payload.kanjis_list);
-                        } catch (err) {
-                            console.error("Erreur lors de l'enregistrement des progressions :", err);
-                            return res.status(500).json({ error: req.t("game_error_server") });
-                        }
-                    }
+                    // if (payload.kanjis_list) {
+                    //     try {
+                    //         await enregistrerProgressions(userId, payload.kanjis_list);
+                    //     } catch (err) {
+                    //         console.error("Erreur lors de l'enregistrement des progressions :", err);
+                    //         return res.status(500).json({ error: req.t("game_error_server") });
+                    //     }
+                    // }
 
                     const betterChronosCount = await Model.countDocuments({
                         chrono: { $lt: chronoValue },
