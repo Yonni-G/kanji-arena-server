@@ -12,7 +12,7 @@ const User = require("../schemas/userSchema");
 
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 2; // nombre de points pour gagner
+const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
 const NB_LIMIT_ALERT_RANKING = 100; // Seuls les X premiers joueurs sont notifiés que leur score a été battu
 
