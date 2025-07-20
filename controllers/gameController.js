@@ -6,7 +6,8 @@ const GameMode = require('../models/GameMode');
 const { generateGameToken, encryptPayload, decryptPayload } = require('../utils/tokenUtils');
 const { getUserIdFromAccessToken } = require('../controllers/userController');
 const KanjiDB = require('../schemas/kanjiSchema');
-const { transporter } = require('./commonController'); 
+const Progression = require('../schemas/progressionSchema');
+const { transporter } = require('./commonController');
 const User = require("../schemas/userSchema");
 
 // CONSTANTES
@@ -22,7 +23,7 @@ const modelMap = {
 };
 
 const _getKanjis = async (nb_kanjis_choices, lang, jlptGrade) => {
-    
+
     const kanjis = await KanjiDB.aggregate([
         { $match: { jlpt: { $gte: jlptGrade } } }, // JLPT >= niveau choisi
         { $sample: { size: nb_kanjis_choices } }
@@ -46,7 +47,7 @@ const _getKanjis = async (nb_kanjis_choices, lang, jlptGrade) => {
 
         return k;
     });
-};  
+};
 
 // on crée une response
 /*
@@ -63,19 +64,25 @@ const _getKanjis = async (nb_kanjis_choices, lang, jlptGrade) => {
     }
 */
 
-async function generateResponse(success, startTime, getCardFunction, lang, jlptGrade) {
+async function generateResponse(success, startTime, getCardFunction, lang, jlptGrade, kanjis_list) {
 
     // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
     const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
+
+    // on crée une question (card + kanji à deviner)
+    const question = await _getCard(getCardFunction, correctIndex, lang, jlptGrade)
+
+    kanjis_list.push({
+        kanji: question.kanji,
+        correct: false
+    });
+    //console.log(kanjis_list)
     // on va créer un nouveau token de game
-    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime, jlptGrade }));
-    //console.log(gameToken)
-    // on crée une question
-    const card = await _getCard(getCardFunction, correctIndex, lang, jlptGrade)
-    //console.log(card);
+    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime, jlptGrade, kanjis_list }));
+    //console.log(question.kanji);
     const response = {
         gameToken: gameToken,
-        card: card
+        card: question.card
     }
     return response;
 }
@@ -89,7 +96,8 @@ const _getCard = async (getCardFunction, correctIndex, lang, jlptGrade) => {
     // on construit notre card
     const card = getCardFunction(kanjis_list, correctIndex);
 
-    return card;
+    // on retourne un obejt avec notre card mais aussi le kanji à deviner (nécessaire pour l'espace apprenant)
+    return { card, kanji: kanjis_list[0].kanji };
 }
 
 exports.getClassicCard = function (kanjis_list, correctIndex) {
@@ -126,22 +134,24 @@ exports.getReverseCard = function (kanjis_list, correctIndex) {
         choices: choices,
     }
 
-    // on écrase le kanji par celui de la bonne réponse
+    // on insere le kanji de la bonne réponse
     card.choices.splice(correctIndex, 0, { label: kanjis_list[0].kanji });
 
     return card;
-}  
+}
 
-// startGame retourne :
+// startGame retourne une response avec :
 // 1/ un token de jeu qui contient dans son payload :
+//  - l'index de la réponse correcte
 //  - le startTime
 //  - le nombre de succès
+//  - le jlptGrade (on le stocke dans le payload pour 1/ ne pas l'envoyer à chaque fois dans les checkAnswer 2/ pour éviter les tricheries)
 // 2/ une card de niveau jlptGrade
 exports.startGame = (getCardFunction) => {
     return async (req, res) => {
         try {
-            const jlptGrade = Number(req.params.jlpt); 
-            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang, jlptGrade);
+            const jlptGrade = Number(req.params.jlpt);
+            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang, jlptGrade, []);
             return res.status(200).json(response)
         } catch (error) {
             console.log(error)
@@ -149,11 +159,176 @@ exports.startGame = (getCardFunction) => {
         }
     }
 }
+
+
+exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
+    return async (req, res) => {
+        const { gameToken, choiceIndex } = req.body;
+
+        if (!gameToken || choiceIndex === undefined) {
+            return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
+        }
+
+        try {
+            // Vérifie la validité du token 
+            const decoded = jwt.verify(gameToken, process.env.JWT_GAME_SECRET);
+            // Déchiffre son contenu
+            const payload = decryptPayload(decoded);
+
+            // On va comparer les réponses
+            let correct = false;
+
+            if (choiceIndex === payload.correctIndex) {
+                correct = true;
+                payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini  
+                // Marquer le dernier kanji demandé comme correct
+                if (payload.kanjis_list && payload.kanjis_list.length > 0) {
+                    payload.kanjis_list[payload.kanjis_list.length - 1].correct = correct;
+                }
+            }
+            // Le joueur a gagné
+            if (payload.success >= NB_SUCCESS_FOR_WINNING) {
+                const userId = await getUserIdFromAccessToken(req, res);
+                const chronoValue = Date.now() - payload.startTime;
+                const Model = modelMap[gameMode];
+
+                // On sauve les informations d'un joueur connecté
+                if (userId && Model) {
+                    try {
+                        // son chrono
+                        const chrono = new Model({
+                            userId: userId,
+                            chrono: chronoValue,
+                            jlpt: payload.jlptGrade
+                        });
+                        await chrono.save();
+
+                        // Récupère le joueur qui vient de battre le score
+                        const newUser = await User.findById(userId).select('username');
+                        await notifyOutOfRanking(payload.jlptGrade, chrono, Model, gameMode, newUser);
+
+                    } catch (err) {
+                        console.error("Erreur lors de l'enregistrement du chrono :", err);
+                        return res.status(500).json({ error: req.t("game_error_server") });
+                    }
+
+                    if (payload.kanjis_list) {
+                        try {
+                            await enregistrerProgressions(userId, payload.kanjis_list);
+                        } catch (err) {
+                            console.error("Erreur lors de l'enregistrement des progressions :", err);
+                            return res.status(500).json({ error: req.t("game_error_server") });
+                        }
+                    }
+
+                    const betterChronosCount = await Model.countDocuments({
+                        chrono: { $lt: chronoValue },
+                        jlpt: payload.jlptGrade
+                    });
+
+                    const ranking = betterChronosCount + 1;
+
+                    return res.status(200).json({
+                        chronoValue: chronoValue,
+                        ranking: ranking
+                    });
+                }
+            }
+
+            // On génère une nouvelle response
+            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang, payload.jlptGrade, payload.kanjis_list);
+
+            // On ajoute la réponse "correct" dans l'objet response retourné afin que le client sache si la réponse est correcte ou non
+            return res.status(200).json({
+                correct: correct,
+                correctIndex: payload.correctIndex,
+                ...response,
+            });
+
+        } catch (error) {
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({ message: req.t("error_expired_token") });
+            }
+            return res.status(401).json({ message: req.t("error_invalid_token") });
+        }
+    }
+};
+
+async function enregistrerProgressions(userId, kanjis_list) {
+    const kanjiErrors = kanjis_list
+        .filter(item => item.correct === false)
+        .map(item => ({ kanji: item.kanji }));
+
+    const kanjiSuccesses = kanjis_list
+        .filter(item => item.correct === true)
+        .map(item => ({ kanji: item.kanji }));
+
+    // 1. Récupérer toutes les progressions du joueur
+    const progressions = await Progression.find({ userId });  
+    const progressionMap = Object.fromEntries(progressions.map(doc => [doc.kanji, doc]));
+
+    // 2. Préparer les opérations
+    const newProgressions = [];
+    const updates = [];
+    const kanjiProcessed = new Set();
+
+    // Traitement Erreurs
+    kanjiErrors.forEach(error => {
+        kanjiProcessed.add(error.kanji);
+        const ex = progressionMap[error.kanji];
+
+        if (!ex) {
+            newProgressions.push({
+                userId,
+                kanji: error.kanji,
+                errorCount: 1,
+                inProgress: false
+            });
+        } else {
+            updates.push({
+                updateOne: {
+                    filter: { _id: ex._id },
+                    update: {
+                        $inc: { errorCount: 1 },
+                        $set: { inProgress: false, updatedAt: new Date() }
+                    }
+                }
+            });
+        }
+    });
+
+    // Traitement Succès
+    kanjiSuccesses.forEach(success => {
+        if (kanjiProcessed.has(success.kanji)) return; // évite doublon
+        const ex = progressionMap[success.kanji];
+        if (!ex) {
+            // ici tu peux créer un nouveau doc avec errorCount:0 si tu veux…
+        } else {
+            updates.push({
+                updateOne: {
+                    filter: { _id: ex._id },
+                    update: {
+                        $inc: { errorCount: -1 },
+                        $set: { inProgress: true, updatedAt: new Date() }
+                    }
+                }
+            });
+        }
+    });
+
+    // 3. Exécution en base de données
+    if (newProgressions.length) await Progression.insertMany(newProgressions);
+    if (updates.length) await Progression.bulkWrite(updates);
+
+    // 4. Nettoyage des progressions à errorCount <= 0
+    await Progression.deleteMany({ userId, errorCount: { $lte: 0 } });
+}
+
 exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
-    const Model = modelMap[gameMode];    
+    const Model = modelMap[gameMode];
     return async (req, res) => {
         try {
-            const jlptGrade = Number(req.params.jlpt); 
+            const jlptGrade = Number(req.params.jlpt);
             const [topChronos, totalChronos] = await Promise.all([
                 Model.find({ jlpt: jlptGrade })
                     .sort({ chrono: 1 })                        // tri croissant
@@ -192,11 +367,11 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             let userBestChrono = null;
             const userId = await getUserIdFromAccessToken(req, res);
 
-            if(userId) {
+            if (userId) {
                 const bestChrono = await Model
-                .findOne({ userId, jlpt: jlptGrade })
-                .sort({ chrono: 1 })
-                .populate('userId', 'username nationality');
+                    .findOne({ userId, jlpt: jlptGrade })
+                    .sort({ chrono: 1 })
+                    .populate('userId', 'username nationality');
 
                 if (bestChrono) {
                     const betterCount = await Model.countDocuments({ jlpt: jlptGrade, chrono: { $lt: bestChrono.chrono } });
@@ -214,7 +389,7 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
             }
 
             return res.status(200).json({ metrics, userBestChrono, chronos });
-        } catch(error) {
+        } catch (error) {
             console.log(error)
             return res.status(500).json({ message: req.t("game_error_unable_loading_ranking") });
         }
@@ -222,87 +397,6 @@ exports.loadRanking = (gameMode = GameMode.CLASSIC) => {
     }
 
 }
-
-exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
-    return async (req, res) => {
-        const { gameToken, choiceIndex } = req.body;
-
-        if (!gameToken || choiceIndex === undefined) {
-            return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
-        }
-
-        try {
-            // Vérifie la validité du token 
-            const decoded = jwt.verify(gameToken, process.env.JWT_GAME_SECRET);
-            // et déchiffre son contenu
-            const payload = decryptPayload(decoded);
-
-            // on va comparer les reponses
-            let correct = false;
-
-            if (choiceIndex === payload.correctIndex) {
-                correct = true;
-                payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini
-            }
-            // le joueur a gagné
-            if (payload.success >= NB_SUCCESS_FOR_WINNING) {
-                const userId = await getUserIdFromAccessToken(req, res);
-                const chronoValue = Date.now() - payload.startTime;
-
-                const Model = modelMap[gameMode];
-
-                // on sauve son chrono s'il est connecté
-                if (userId && Model) {
-                    try {
-                        const chrono = new Model({
-                            userId: userId,
-                            chrono: chronoValue,
-                            jlpt: payload.jlptGrade
-                        });
-                        await chrono.save();
-                        // fonction qui va éventuellement envoyer un email au joueur dont le chrono vient d'être battu
-                        // Récupère le joueur qui vient de battre le score
-                        const newUser = await User.findById(userId).select('username');
-                        await notifyOutOfRanking(payload.jlptGrade, chrono, Model, gameMode, newUser);
-
-                    } catch (err) {
-                        console.error("Erreur lors de l'enregistrement du chrono :", err);
-                        return res.status(500).json({ error: req.t("game_error_server") });
-                    }
-                }
-
-                const betterChronosCount = await Model.countDocuments({
-                    chrono: { $lt: chronoValue },
-                    jlpt: payload.jlptGrade
-                });
-
-                const ranking = betterChronosCount + 1;
-
-                return res.status(200).json({
-                    chronoValue: chronoValue,
-                    ranking: ranking
-                });
-            }
-
-            // on genere une nouvelle response
-            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang, payload.jlptGrade);
-
-            // on ajoute "correct" dans l'objet response retourné
-            return res.status(200).json({
-                correct: correct,
-                correctIndex: payload.correctIndex,
-                ...response,
-            });
-
-        } catch (error) {
-            if (error.name === 'TokenExpiredError') {
-                return res.status(401).json({ message: req.t("error_expired_token") });
-            }
-
-            return res.status(401).json({ message: req.t("error_invalid_token") });
-        }
-    }
-};
 
 function formatChrono(ms) {
     const minutes = Math.floor(ms / 60000);
@@ -330,7 +424,7 @@ async function notifyOutOfRanking(jlptGrade, newChrono, Model, gameMode, newUser
 
     // 3. Trouver le chrono qui vient d'être éjecté du top
     const chronos = await Model.find()
-        .find({jlpt: jlptGrade})
+        .find({ jlpt: jlptGrade })
         .sort({ chrono: 1 }) // tri croissant
         .skip(ranking)       // saute les meilleurs + le nouveau
         .limit(1)            // prend le suivant
