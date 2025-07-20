@@ -186,6 +186,7 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                     payload.kanjis_list[payload.kanjis_list.length - 1].correct = correct;
                 }
             }
+            console.log(payload.success)
             // Le joueur a gagné
             if (payload.success >= NB_SUCCESS_FOR_WINNING) {
                 const userId = await getUserIdFromAccessToken(req, res);
