@@ -10,6 +10,7 @@ const cors = require("cors");
 const userRoutes = require("./routes/userRoutes");
 const gameRoutes = require("./routes/gameRoutes");
 const commonRoutes = require("./routes/commonRoutes");
+const myLearningSpaceRoutes = require("./routes/myLearningSpaceRoutes");
 const { errorHandler } = require("./middleware/errorMiddleware");
 const langMiddleware = require("./middleware/langMiddleware");
 const { createTranslator } = require('./translations/translator');
@@ -57,7 +58,7 @@ app.use((req, res, next) => {
 app.use("/api/:lang/users", userRoutes);
 app.use("/api/:lang/games", gameRoutes);
 app.use("/api/:lang", commonRoutes);
-
+app.use("/api/:lang/users", myLearningSpaceRoutes);
 
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log("MongoDB Connected"))
