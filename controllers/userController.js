@@ -13,7 +13,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const USERNAME_PATTERN = /^[a-zA-Z0-9]{3,12}$/;
 const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",.<>?/~]).{8,}$/;
 
-exports.getUserIdFromAccessToken = async (req, res) => {
+const getUserIdFromAccessToken = async (req, res) => {
     const authHeader = req.headers.authorization;
     const accessToken = authHeader?.split(' ')[1];
 
@@ -30,7 +30,7 @@ exports.getUserIdFromAccessToken = async (req, res) => {
 
 exports.getAlertOutOfRanking = async (req, res) => {
     try {
-        const userId = await exports.getUserIdFromAccessToken(req, res);
+        const userId = await getUserIdFromAccessToken(req, res);
         const user = await User.findOne({ _id: userId });
 
         if (!user) {
@@ -45,7 +45,7 @@ exports.getAlertOutOfRanking = async (req, res) => {
 };
 
 exports.setAlertOutOfRanking = async (req, res) => {
-    const userId = await exports.getUserIdFromAccessToken(req, res);
+    const userId = await getUserIdFromAccessToken(req, res);
     const { alertOutOfRanking } = req.body;
 
     if (alertOutOfRanking === undefined) {
