@@ -5,7 +5,13 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { generateAccessToken } = require("../utils/tokenUtils");
 const jwt = require("jsonwebtoken");
-const { transporter, formatContactMessage } = require("./commonController");
+const { transporter } = require("./commonController");
+
+/* On déclare ici l'ensemble de nos regexp */
+const NATIONALITY_PATTERN = /^[a-zA-Z]{2}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9]{3,12}$/;
+const PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",.<>?/~]).{8,}$/;
 
 exports.getUserIdFromAccessToken = async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -86,25 +92,21 @@ exports.register = async (req, res, next) => {
         if (!username || !nationality || !email || !password || !confirmPassword) {
             return res.status(400).json({ message: req.t("all_fields_required") });
         }
-
-        const nationalityPattern = /^[a-zA-Z]{2}$/;
-        if (!nationalityPattern.test(nationality)) {
+        
+        if (!NATIONALITY_PATTERN.test(nationality)) {
             return res.status(400).json({ message: req.t("invalid_nationality_code") });
         }
-
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(email)) {
+        
+        if (!EMAIL_PATTERN.test(email)) {
             return res.status(400).json({ message: req.t("invalid_email") });
         }
 
-        //const usernamePattern = /^[\p{L}\d]{3,12}$/u; // \p{L} = toute lettre unicode, \d = chiffre
-        const usernamePattern = /^[a-zA-Z0-9]{3,12}$/;
-        if (!usernamePattern.test(username)) {
+        //const usernamePattern = /^[\p{L}\d]{3,12}$/u; // \p{L} = toute lettre unicode, \d = chiffre        
+        if (!USERNAME_PATTERN.test(username)) {
             return res.status(400).json({ message: req.t("invalid_username_length") });
         }
 
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};:'",.<>?/~]).{8,}$/;
-        if (!passwordPattern.test(password)) {
+        if (!PASSWORD_PATTERN.test(password)) {
             return res.status(400).json({ message: req.t("weak_password") });
         }
 
@@ -141,13 +143,11 @@ exports.login = async (req, res, next) => {
             return res.status(400).json({ message: req.t("all_fields_required") });
         }
 
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(email)) {
+        if (!EMAIL_PATTERN.test(email)) {
             return res.status(400).json({ message: req.t("invalid_email") });
         }
 
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordPattern.test(password)) {
+        if (!PASSWORD_PATTERN.test(password)) {
             return res.status(400).json({ message: req.t("weak_password") });
         }
 
@@ -174,8 +174,7 @@ exports.forgotPassword = async (req, res, next) => {
             return res.status(400).json({ message: req.t("all_fields_required") });
         }
 
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(email)) {
+        if (!EMAIL_PATTERN.test(email)) {
             return res.status(400).json({ message: req.t("invalid_email") });
         }
 
@@ -210,8 +209,7 @@ exports.resetPassword = async (req, res, next) => {
         if (!token || !password || !confirmPassword) {
             return res.status(400).json({ message: req.t("all_fields_required") });
         }
-        const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-        if (!passwordPattern.test(password)) {
+        if (!PASSWORD_PATTERN.test(password)) {
             return res.status(400).json({ message: req.t("weak_password") });
         }
         if (password !== confirmPassword) {
