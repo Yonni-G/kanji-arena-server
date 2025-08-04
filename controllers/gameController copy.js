@@ -12,9 +12,7 @@ const User = require("../schemas/userSchema");
 
 // CONSTANTES
 const NB_KANJIS_CHOICES = 3; // Nombre de kanjis à choisir pour chaque carte
-const NB_SUCCESS_FOR_WINNING = 2; // nombre de points pour gagner
-const NB_COEFF_MULTIPLICATEUR = 2; // on va charger x fois plus de kanjis que le nombre de succès requis
-const NB_MIN_CARDS = NB_SUCCESS_FOR_WINNING / 2; // nombre mini de cards à partir duquel on va recharger des cards
+const NB_SUCCESS_FOR_WINNING = 10; // nombre de points pour gagner
 const NB_LIMIT_RANKING = 100; // Nbre de chronos max qu'on recupere
 const NB_LIMIT_ALERT_RANKING = 100; // Seuls les X premiers joueurs sont notifiés que leur score a été battu
 
@@ -24,15 +22,14 @@ const modelMap = {
     // ajouter d'autres modes ici
 };
 
-// retourne une liste de x kanjis au hasard, de niveau jlptGrade
-const _getKanjis = async (lang, jlptGrade) => {
+const _getKanjis = async (nb_kanjis_choices, lang, jlptGrade) => {
 
     const kanjis = await KanjiDB.aggregate([
         { $match: { jlpt: { $gte: jlptGrade } } }, // JLPT >= niveau choisi
-        { $sample: { size: NB_KANJIS_CHOICES * NB_SUCCESS_FOR_WINNING * NB_COEFF_MULTIPLICATEUR } }
+        { $sample: { size: nb_kanjis_choices } }
     ]);
 
-    // ici on fait un petit hack comme on a pas encore les sens japonais : si la langue du user est "ja", on force à "en" pour recuperer les traduction anglaises
+    // ici on fait un petit hack comme on a pas les sens japonais : si la langue est "ja", on force à "en" pour recuperer les traduction anglaises
     if (lang === 'ja') {
         lang = 'en';
     }
@@ -55,7 +52,7 @@ const _getKanjis = async (lang, jlptGrade) => {
 // on crée une response
 /*
     gameToken
-    cards {
+    card {
         proposal
         more
         choices [
@@ -64,71 +61,43 @@ const _getKanjis = async (lang, jlptGrade) => {
             label
             more
         ]
-    }[]
+    }
 */
 
-async function generateResponse(success, startTime, getCardFunction, lang, jlptGrade, kanjis_joues, correctIndexes, currentCardIndex) {
+async function generateResponse(success, startTime, getCardFunction, lang, jlptGrade, kanjis_list) {
 
-    let cards = [];
-    // console.log(correctIndexes.length, currentCardIndex, NB_MIN_CARDS);
+    // on tire un chiffre entre 0 et NB_KANJIS_CHOICES : définit la place de la bonne réponse
+    const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
 
-    // on ne va recharger des cartes uniquement si on va atteindre la fin de la liste
-    if ((correctIndexes.length - currentCardIndex) <= NB_MIN_CARDS) {
-        // on génère une liste de correctIndexes
-        const newCorrectIndexes = [];
-        for (let i = 0; i < NB_SUCCESS_FOR_WINNING * NB_COEFF_MULTIPLICATEUR; i++) {
-            const correctIndex = Math.floor(Math.random() * NB_KANJIS_CHOICES);
-            newCorrectIndexes.push(correctIndex);
-        }
+    // on crée une question (card + kanji à deviner)
+    const question = await _getCard(getCardFunction, correctIndex, lang, jlptGrade)
 
-        // on génère nos cards en leur passant la position de leur réponse correcte
-        cards = await _getCards(getCardFunction, newCorrectIndexes, lang, jlptGrade);
-        // bon code : on prend le même index dans kanjis_a_deviner
-        kanjis_joues = kanjis_joues.concat(
-            cards.cards.map((c, idx) => ({
-                kanji: cards.kanjis_a_deviner[idx], // index i
-                correct: false
-            }))
-        );
-
-        //console.log(kanjis_joues);
-        // on va ajouter les les nouveaux correctIndexes à notre ancien tableau oldCorrectIndexes
-        // on concatène les deux tableaux
-        correctIndexes = correctIndexes.concat(newCorrectIndexes);
-    }
-
-    //console.log(correctIndexes, currentCardIndex);
-
+    kanjis_list.push({
+        kanji: question.kanji,
+        correct: false
+    });
+    //console.log(kanjis_list)
     // on va créer un nouveau token de game
-    const gameToken = generateGameToken(encryptPayload({ correctIndexes, success, startTime, jlptGrade, kanjis_joues, currentCardIndex }));
-
+    const gameToken = generateGameToken(encryptPayload({ correctIndex, success, startTime, jlptGrade, kanjis_list }));
+    //console.log(question.kanji);
     const response = {
         gameToken: gameToken,
-        cards: cards.cards || cards
+        card: question.card
     }
     return response;
 }
 
-// retourne un ensemble de cards à partir d'une liste de kanjis
-// getCardFunction est soit getClassicCard soit getReverseCard
-const _getCards = async (getCardFunction, correctIndexes, lang, jlptGrade) => {
+const _getCard = async (getCardFunction, correctIndex, lang, jlptGrade) => {
 
     // on recupere x kanjis au hasard
-    const kanjis_list = await _getKanjis(lang, jlptGrade);
+    const kanjis_list = await _getKanjis(NB_KANJIS_CHOICES, lang, jlptGrade);
     //console.log(kanjis_list);
 
-    // on construit nos cards par paquet de NB_KANJIS_CHOICES
-    const cards = [];
-    const kanjis_a_deviner = [];
-    // on boucle sur les kanjis_list par tranche de NB_KANJIS_CHOICES
-    for (let i = 0; i < kanjis_list.length; i += NB_KANJIS_CHOICES) {
-        const card = getCardFunction(kanjis_list.slice(i, i + NB_KANJIS_CHOICES), correctIndexes[i / NB_KANJIS_CHOICES]);
-        cards.push(card);
-        kanjis_a_deviner.push(kanjis_list[i].kanji);
-    }
-    //console.log("kanjis_a_deviner:", kanjis_a_deviner);
-    // on retourne un objet avec nos cards mais aussi le kanji à deviner (nécessaire pour l'espace apprenant)
-    return { cards, kanjis_a_deviner };
+    // on construit notre card
+    const card = getCardFunction(kanjis_list, correctIndex);
+
+    // on retourne un obejt avec notre card mais aussi le kanji à deviner (nécessaire pour l'espace apprenant)
+    return { card, kanji: kanjis_list[0].kanji };
 }
 
 exports.getClassicCard = function (kanjis_list, correctIndex) {
@@ -167,21 +136,22 @@ exports.getReverseCard = function (kanjis_list, correctIndex) {
 
     // on insere le kanji de la bonne réponse
     card.choices.splice(correctIndex, 0, { label: kanjis_list[0].kanji });
+
     return card;
 }
 
 // startGame retourne une response avec :
 // 1/ un token de jeu qui contient dans son payload :
-//  - les index des réponses correctes
+//  - l'index de la réponse correcte
 //  - le startTime
 //  - le nombre de succès
 //  - le jlptGrade (on le stocke dans le payload pour 1/ ne pas l'envoyer à chaque fois dans les checkAnswer 2/ pour éviter les tricheries)
-// 2/ des cards de niveau jlptGrade
+// 2/ une card de niveau jlptGrade
 exports.startGame = (getCardFunction) => {
     return async (req, res) => {
         try {
             const jlptGrade = Number(req.params.jlpt);
-            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang, jlptGrade, [], [], 0);
+            const response = await generateResponse(0, Date.now(), getCardFunction, req.lang, jlptGrade, []);
             return res.status(200).json(response)
         } catch (error) {
             console.log(error)
@@ -208,17 +178,20 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
             // On va comparer les réponses
             let correct = false;
 
-            if (choiceIndex === payload.correctIndexes[payload.currentCardIndex]) {
+            if (choiceIndex === payload.correctIndex) {
                 correct = true;
                 payload.success = (payload.success || 0) + 1; // au cas où success n'est pas défini  
                 // Marquer le dernier kanji demandé comme correct
-                if (payload.kanjis_joues && payload.kanjis_joues.length > 0) {
-                    payload.kanjis_joues[payload.currentCardIndex].correct = correct;
+                if (payload.kanjis_list && payload.kanjis_list.length > 0) {
+                    payload.kanjis_list[payload.kanjis_list.length - 1].correct = correct;
                 }
             }
-            
+
             // Le joueur a gagné
             if (payload.success >= NB_SUCCESS_FOR_WINNING) {
+
+
+                console.log(payload.success)
 
                 const userId = await getUserIdFromAccessToken(req, res);
                 const chronoValue = Date.now() - payload.startTime;
@@ -244,14 +217,14 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                         return res.status(500).json({ error: req.t("game_error_server") });
                     }
 
-                    if (payload.kanjis_joues) {
+                    if (payload.kanjis_list) {
                         try {
-                            await enregistrerProgressions(userId, payload.kanjis_joues.slice(0, payload.currentCardIndex + 1));
+                            await enregistrerProgressions(userId, payload.kanjis_list);
                         } catch (err) {
                             console.error("Erreur lors de l'enregistrement des progressions :", err);
                             return res.status(500).json({ error: req.t("game_error_server") });
                         }
-                    }                    
+                    }
                 }
                 const betterChronosCount = await Model.countDocuments({
                     chrono: { $lt: chronoValue },
@@ -265,14 +238,14 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                     ranking: ranking
                 });
             }
-            
-            // On génère une response
-            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang, payload.jlptGrade, payload.kanjis_joues, payload.correctIndexes, payload.currentCardIndex + 1);
+
+            // On génère une nouvelle response
+            const response = await generateResponse(payload.success, payload.startTime, getCardFunction, req.lang, payload.jlptGrade, payload.kanjis_list);
 
             // On ajoute la réponse "correct" dans l'objet response retourné afin que le client sache si la réponse est correcte ou non
             return res.status(200).json({
-                correct: correct,// pour informer si c'est bon ou pas
-                correctIndex: payload.correctIndexes[payload.currentCardIndex],//pour stocker les bonnes reponses coté client
+                correct: correct,
+                correctIndex: payload.correctIndex,
                 ...response,
             });
 
@@ -285,18 +258,17 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
     }
 };
 
-async function enregistrerProgressions(userId, kanjis_joues) {
-    //console.log(kanjis_joues);
-    const kanjiErrors = kanjis_joues
+async function enregistrerProgressions(userId, kanjis_list) {
+    const kanjiErrors = kanjis_list
         .filter(item => item.correct === false)
         .map(item => ({ kanji: item.kanji }));
 
-    const kanjiSuccesses = kanjis_joues
+    const kanjiSuccesses = kanjis_list
         .filter(item => item.correct === true)
         .map(item => ({ kanji: item.kanji }));
 
     // 1. Récupérer toutes les progressions du joueur
-    const progressions = await Progression.find({ userId });  
+    const progressions = await Progression.find({ userId });
     const progressionMap = Object.fromEntries(progressions.map(doc => [doc.kanji, doc]));
 
     // 2. Préparer les opérations
