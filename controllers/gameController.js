@@ -193,9 +193,9 @@ exports.startGame = (getCardFunction) => {
 
 exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
     return async (req, res) => {
-        const { gameToken, choiceIndex } = req.body;
+        const { gameToken, choiceIndex, mode } = req.body;
 
-        if (!gameToken || choiceIndex === undefined) {
+        if (!gameToken || choiceIndex === undefined || !mode || !['chrono', 'training'].includes(mode)) {
             return res.status(401).json({ message: req.t("game_error_missing_answer_parameters") });
         }
 
@@ -224,26 +224,9 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                 const chronoValue = Date.now() - payload.startTime;
                 const Model = modelMap[gameMode];
 
-                // On sauve les informations d'un joueur connecté
+                // On sauve les données du joueur connecté
                 if (userId && Model) {
-                    try {
-                        // son chrono
-                        const chrono = new Model({
-                            userId: userId,
-                            chrono: chronoValue,
-                            jlpt: payload.jlptGrade
-                        });
-                        await chrono.save();
-
-                        // Récupère le joueur qui vient de battre le score
-                        const newUser = await User.findById(userId).select('username');
-                        await notifyOutOfRanking(payload.jlptGrade, chrono, Model, gameMode, newUser);
-
-                    } catch (err) {
-                        console.error("Erreur lors de l'enregistrement du chrono :", err);
-                        return res.status(500).json({ error: req.t("game_error_server") });
-                    }
-
+                    // on sauve les progressions du joueur quel que soit le mode
                     if (payload.kanjis_joues) {
                         try {
                             await enregistrerProgressions(userId, payload.kanjis_joues.slice(0, payload.currentCardIndex + 1));
@@ -251,19 +234,48 @@ exports.checkAnswer = (getCardFunction, gameMode = GameMode.CLASSIC) => {
                             console.error("Erreur lors de l'enregistrement des progressions :", err);
                             return res.status(500).json({ error: req.t("game_error_server") });
                         }
-                    }                    
+                    } 
+                    // on sauvegarde le chrono
+                    if(mode === 'chrono') {
+                        try {
+                            // son chrono
+                            const chrono = new Model({
+                                userId: userId,
+                                chrono: chronoValue,
+                                jlpt: payload.jlptGrade
+                            });
+                            await chrono.save();
+
+                            // Récupère le joueur qui vient de battre le score
+                            const newUser = await User.findById(userId).select('username');
+                            await notifyOutOfRanking(payload.jlptGrade, chrono, Model, gameMode, newUser);
+
+                        } catch (err) {
+                            console.error("Erreur lors de l'enregistrement du chrono :", err);
+                            return res.status(500).json({ error: req.t("game_error_server") });
+                        }                        
+                    }
+
                 }
-                const betterChronosCount = await Model.countDocuments({
-                    chrono: { $lt: chronoValue },
-                    jlpt: payload.jlptGrade
-                });
+                // connecté ou non, on calcule le rang du chrono du joueur
+                if(mode === 'chrono') {
+                    const betterChronosCount = await Model.countDocuments({
+                        chrono: { $lt: chronoValue },
+                        jlpt: payload.jlptGrade
+                    });
 
-                const ranking = betterChronosCount + 1;
-
-                return res.status(200).json({
-                    chronoValue: chronoValue,
-                    ranking: ranking
-                });
+                    const ranking = betterChronosCount + 1;
+                    return res.status(200).json({
+                        chronoValue: chronoValue,
+                        ranking: ranking
+                    }); 
+                }
+                else if (mode === 'training') {
+                    // En mode training, on ne retourne pas le chrono
+                    return res.status(200).json({
+                        training: true
+                    });
+                }                
             }
             
             // On génère une response
